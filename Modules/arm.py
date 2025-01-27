@@ -1,9 +1,9 @@
-def forward(distance, velocity):
-    return f"Move Forward {distance} meters {velocity} m/s"
+def forward(distance):
+    return f"Move Forward {distance} meters"
 
 
-def backward(distance, velocity):
-    return f"Move Backward {distance} meters {velocity} m/s"
+def backward(distance):
+    return f"Move Backward {distance} meters"
 
 
 def turn_left(degrees):
@@ -17,13 +17,11 @@ def turn_right(degrees):
 COMMANDS = {
     "Forward": {
         "func": forward,
-        "inputs": {"Distance (meters)": "distance"
-        , "Velocity (m/s)": "velocity"},
+        "inputs": {"Distance (meters)": "distance"},
     },
     "Backward": {
         "func": backward,
-        "inputs": {"Distance (meters)": "distance"
-        , "Velocity (m/s)": "velocity"},
+        "inputs": {"Distance (meters)": "distance"},
     },
     "Turn Left": {
         "func": turn_left,

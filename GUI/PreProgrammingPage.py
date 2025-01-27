@@ -6,6 +6,14 @@ import os
 
 
 class PreProgrammingPage:
+    # TODO: 
+    # Buttons should be able to be used multiple times (Clear seems to break everything)
+    # Command list needs updated on undo and redo
+    # If you "drag" a command but dont change its place in the command list, commands overlap
+    # Run needs to show a warning when no var in value
+    # 
+    
+    
     # Programming grid setup
     GRID_ROWS = 10
     GRID_COLS = 1
@@ -33,6 +41,9 @@ class PreProgrammingPage:
         ]
         
         self.command_list = []  # List to maintain the order of blocks
+        
+        self.undo_list = [] # List to maintain the recent actions
+        self.redo_list = [] # List to maintain the recent actions that were undone
 
         # To handle row highlighting
         self.highlight_rect = None
@@ -142,18 +153,19 @@ class PreProgrammingPage:
                 command_label.bind("<Button-1>", lambda e, label=command_label: self.add_block_to_grid(label))
 
     def add_block_to_grid(self, command_label):
+        self.undo_list.append(self.capture_state())
+        self.redo_list.clear()
         for row in range(len(self.grid_cells)):
             if not self.grid_cells[row][0]:  # Check if the cell is empty
                 block = self.create_block(command_label, row, 0)
                 self.grid_cells[row][0] = block  # Store the block in the grid
                 self.command_list.append(block)  # Add the block to the list
-                block.bind("<Button-1>", self.on_drag_start)
+                block.bind("<Button-1><Button-1>", self.on_drag_start)
                 block.bind("<B1-Motion>", self.on_drag_motion)
                 block.bind("<ButtonRelease-1>", self.on_drop)
                 return
         self.add_row()
         self.add_block_to_grid(command_label)
-        print(self.command_list)
 
 
     def create_block(self, command_label, row, col):
@@ -279,6 +291,8 @@ class PreProgrammingPage:
             )
 
     def on_drop(self, event, block):
+        self.undo_list.append(self.capture_state())
+        self.redo_list.clear()
         if block and self.highlight_rect:
             coords = self.programming_area.coords(self.highlight_rect)
             target_row = int(coords[1] // self.CELL_HEIGHT)
@@ -291,7 +305,7 @@ class PreProgrammingPage:
             self.grid_cells[target_row][0] = block
             block.place(x=0, y=target_row * self.CELL_HEIGHT)
 
-            # Update the command list based on the new grid order
+            # Update the command list and redo list based on the new grid order
             self.update_command_list()
 
             self.move_blocks_up()
@@ -343,8 +357,6 @@ class PreProgrammingPage:
             self.programming_area.delete(self.highlight_rect)
             self.highlight_rect = None
 
-    import os
-
     def handle_button_click(self, button_text):
         if button_text == "Run":
             self.run_program()
@@ -366,8 +378,10 @@ class PreProgrammingPage:
         elif button_text == "Home":
             self.controller.show_page("StartScreen")
 
-        elif button_text in ["Undo", "Redo"]:
-            messagebox.showinfo("Info", f"{button_text} functionality coming soon!")
+        elif button_text == "Undo":
+            self.undo_last_action()
+        elif button_text == "Undo":
+            self.redo_last_action()
             
     def run_program(self):
         commands_summary = []
@@ -452,8 +466,62 @@ class PreProgrammingPage:
             messagebox.showerror("Load Error", f"File '{file_name}.txt' not found.")
         except Exception as e:
             messagebox.showerror("Load Error", f"Error loading program: {e}")
+            
+    def undo_last_action(self):
+        # Restore the last state
+        if not self.undo_list:
+            messagebox.showinfo("Undo", "Nothing to undo")
+            return
+        print("Undo" + self.undo_list)
+        print("Redo" + self.redo_list)
+        self.redo_list.append(self.capture_state())
+        print("Undo" + self.undo_list)
+        print("Redo" + self.redo_list)
+        
+        last_state = self.undo_list.pop()
+        self.restore_state(last_state)
+        
+    def redo_last_action(self):
+        # Restore the last undone state
+        if not self.redo_list:
+            messagebox.showinfo("Redo", "Nothing to Redo")
+            return
+        
+        print("Undo" + self.undo_list)
+        print("Redo" + self.redo_list)
+        self.undo_list.append(self.capture_state())
+        print("Undo" + self.undo_list)
+        print("Redo" + self.redo_list)
+        
+        last_state = self.redo_list.pop()
+        self.restore_state(last_state)
 
-
+    def capture_state(self):
+        # Capture the current state of the programming area
+        state = []
+        for block in self.command_list:
+            command_name = block.command_label.cget("text")
+            inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
+            state.append((command_name, inputs))
+        return state
+    
+    def restore_state(self, state):
+        # Restore the programming area to a previous state.
+        self.clear_programming_area()  # Clear the current programming area
+        for command_name, inputs in state:
+            if command_name not in COMMANDS:
+                messagebox.showerror("Load Error", f"Command '{command_name}' not found.")
+                continue
+            command_data = COMMANDS[command_name]
+            block = self.create_block_from_data(command_name, command_data["inputs"], inputs)
+            self.command_list.append(block)
+            for row in range(len(self.grid_cells)):
+                if not self.grid_cells[row][0]:  # Place block in the first empty row
+                    block.grid_row = row
+                    block.grid_col = 0
+                    self.grid_cells[row][0] = block
+                    block.place(x=0, y=row * self.CELL_HEIGHT)
+                    break
 
     def create_block_from_data(self, command_name, expected_inputs, input_values):
         # Get the module color or use a default
@@ -511,7 +579,7 @@ class PreProgrammingPage:
 
 
     def create_command_label(self, command_name):
-        """Helper to create a dummy label for loading commands."""
+        # Helper to create a dummy label for loading commands.
         return tk.Label(
             self.command_section,
             text=command_name,
@@ -527,6 +595,7 @@ class PreProgrammingPage:
         self.grid_cells = [
             [None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)
         ]
+        self.command_list.clear()
 
     def add_row(self):
         # Add a new row to the grid and adjust the canvas size
@@ -560,5 +629,6 @@ class PreProgrammingPage:
         self.programming_area.yview_scroll(-1 * (event.delta // 120), "units")
 
     def update_command_list(self):
+        # Update the list of commands
         self.command_list = [self.grid_cells[row][0] for row in range(len(self.grid_cells)) if self.grid_cells[row][0]];
         print(self.command_list)

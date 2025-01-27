@@ -9,7 +9,6 @@ class PreProgrammingPage:
     # TODO: 
     # Buttons should be able to be used multiple times (Clear seems to break everything)
     # Command list needs updated on undo and redo
-    # If you "drag" a command but dont change its place in the command list, commands overlap
     # Run needs to show a warning when no var in value
     # 
     
@@ -297,23 +296,35 @@ class PreProgrammingPage:
             coords = self.programming_area.coords(self.highlight_rect)
             target_row = int(coords[1] // self.CELL_HEIGHT)
 
+            # Check if the target row is occupied
             if self.grid_cells[target_row][0]:
                 self.move_blocks_down(target_row)
 
+            # Place the block in the target row
             block.grid_row = target_row
             block.grid_col = 0
             self.grid_cells[target_row][0] = block
             block.place(x=0, y=target_row * self.CELL_HEIGHT)
 
-            # Update the command list and redo list based on the new grid order
+            # Update the command list based on the new grid order
             self.update_command_list()
 
+            # Fill empty rows by moving blocks up
             self.move_blocks_up()
-            self.clear_highlight()
-        self.drag_data = {"widget": None, "row": None, "col": None}
-        print(self.command_list.__len__)
-        print(self.command_list)
+        else:
+            # Restore the block to its original position if not placed
+            original_row = self.drag_data["row"]
+            original_col = self.drag_data["col"]
 
+            if original_row is not None and original_col is not None:
+                block.grid_row = original_row
+                block.grid_col = original_col
+                self.grid_cells[original_row][original_col] = block
+                block.place(x=0, y=original_row * self.CELL_HEIGHT)
+
+        # Reset drag data and clear highlight
+        self.drag_data = {"widget": None, "row": None, "col": None}
+        self.clear_highlight()
 
     def move_blocks_down(self, start_row):
         # Move all blocks from start_row down by one row
@@ -385,13 +396,12 @@ class PreProgrammingPage:
             
     def run_program(self):
         commands_summary = []
-
         for block in self.command_list:
             # Get the command name directly from the block
             command_name = block.command_label.cget("text")
 
             # Collect inputs from the block
-            inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
+            inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}                
             input_details = ", ".join(f"{label}: {value}" for label, value in inputs.items())
             commands_summary.append(f"{command_name} ({input_details})")
 

@@ -1,0 +1,564 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+from utils import load_modules
+from Modules.movement import COMMANDS
+import os
+
+
+class PreProgrammingPage:
+    # Programming grid setup
+    GRID_ROWS = 10
+    GRID_COLS = 1
+    CELL_HEIGHT = 60
+    CELL_WIDTH = 750
+
+    def __init__(self, container, controller):
+        # Initialize the pre-programming page
+        self.frame = tk.Frame(container, bg="white")
+        self.controller = controller
+
+        # For drag-and-drop tracking
+        self.drag_data = {
+            "widget": None,
+            "row": None,
+            "col": None,
+        }
+
+        # To store colors for modules
+        self.module_colors = {}
+
+        # Grid tracking
+        self.grid_cells = [
+            [None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)
+        ]
+        
+        self.command_list = []  # List to maintain the order of blocks
+
+        # To handle row highlighting
+        self.highlight_rect = None
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.frame.rowconfigure([0, 1], weight=1)
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.columnconfigure(1, weight=5)
+        self.frame.columnconfigure(2, weight=2)
+
+        # Box A: Commands list (Vertical Left)
+        self.command_section = tk.LabelFrame(
+            self.frame,
+            text="Commands",
+            bg="white",
+            fg="black",
+            font=("Arial", 10, "bold"),
+        )
+        self.command_section.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=5, pady=5)
+        self.populate_command_section(self.command_section)
+
+
+        # Middle frame
+        middle_frame = tk.Frame(self.frame, bg="white")
+        middle_frame.grid(row=0, column=1, rowspan=2, sticky="nsew", padx=5, pady=5)
+        middle_frame.rowconfigure(0, weight=0)
+        middle_frame.rowconfigure(1, weight=1)
+        middle_frame.columnconfigure(0, weight=1)
+
+        # Box B: Functional buttons
+        box_b = tk.Frame(middle_frame, bg="white", height=50)
+        box_b.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        button_colors = {
+            "Home": "#808080",
+            "Save": "#007BFF",
+            "Load": "#007BFF",
+            "Undo": "#FFA500",
+            "Redo": "#FFA500",
+            "Clear": "#FF0000",
+            "Run": "#32CD32",
+        }
+        for btn_text, btn_color in button_colors.items():
+            tk.Button(
+                box_b,
+                text=btn_text,
+                bg=btn_color,
+                fg="white",
+                width=10,
+                font=("Arial", 10, "bold"),
+                command=lambda t=btn_text: self.handle_button_click(t),
+            ).pack(side="left", padx=10, pady=5)
+
+        # File name input
+        tk.Label(
+            box_b, text="File Name:", bg="white", font=("Arial", 10)
+        ).pack(side="left", padx=5)
+        self.file_name_entry = tk.Entry(box_b, width=20, font=("Arial", 10))
+        self.file_name_entry.pack(side="left", padx=10)
+        self.file_name_entry.insert(0, "program")  # Default file name
+
+        # Box C: Programming area
+        programming_frame = tk.Frame(middle_frame, bg="white")
+        programming_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+
+        self.scrollbar = ttk.Scrollbar(programming_frame, orient="vertical")
+        self.scrollbar.pack(side="right", fill="y")
+
+        self.programming_area = tk.Canvas(
+            programming_frame,
+            bg="lightgray",
+            width=self.CELL_WIDTH,
+            height=self.GRID_ROWS * self.CELL_HEIGHT,
+            highlightthickness=0,
+            yscrollcommand=self.scrollbar.set,
+        )
+        self.programming_area.pack(side="left", fill="both", expand=True)
+        self.scrollbar.config(command=self.programming_area.yview)
+
+        self.canvas_content = tk.Frame(self.programming_area, bg="lightgray")
+        self.programming_area.create_window((0, 0), window=self.canvas_content, anchor="nw")
+
+        self.programming_area.bind("<MouseWheel>", self.on_mouse_wheel)
+        self.update_scroll_region()
+
+    def populate_command_section(self, command_frame):
+        modules_commands = load_modules()
+        for module_name, module_data in modules_commands.items():
+            commands = module_data["commands"]
+            color = module_data["color"]
+            self.module_colors[module_name] = color
+            module_label = tk.Label(command_frame, text=module_name, font=("Arial", 10, "bold"))
+            module_label.pack(pady=5)
+
+            for command_name in commands.keys():
+                command_label = tk.Label(
+                    command_frame,
+                    text=command_name,
+                    bg=color,
+                    fg="white",
+                    font=("Arial", 10),
+                    relief="raised",
+                    padx=5,
+                    pady=2,
+                )
+                command_label.pack(pady=2, padx=5, fill="x")
+                command_label.bind("<Button-1>", lambda e, label=command_label: self.add_block_to_grid(label))
+
+    def add_block_to_grid(self, command_label):
+        for row in range(len(self.grid_cells)):
+            if not self.grid_cells[row][0]:  # Check if the cell is empty
+                block = self.create_block(command_label, row, 0)
+                self.grid_cells[row][0] = block  # Store the block in the grid
+                self.command_list.append(block)  # Add the block to the list
+                block.bind("<Button-1>", self.on_drag_start)
+                block.bind("<B1-Motion>", self.on_drag_motion)
+                block.bind("<ButtonRelease-1>", self.on_drop)
+                return
+        self.add_row()
+        self.add_block_to_grid(command_label)
+        print(self.command_list)
+
+
+    def create_block(self, command_label, row, col):
+        # Create a draggable block in the programming area
+        color = command_label.cget("bg")
+        command_name = command_label.cget("text")
+
+        # Create a block
+        block = tk.Frame(
+            self.programming_area,
+            bg=color,
+            relief="raised",
+            bd=2,
+            width=self.CELL_WIDTH,
+            height=self.CELL_HEIGHT,
+        )
+        block.place(x=col * self.CELL_WIDTH, y=row * self.CELL_HEIGHT)
+
+        # Create a container frame for the block's content
+        content_frame = tk.Frame(block, bg=color)
+        content_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # Add command label
+        label = tk.Label(
+            content_frame,
+            text=command_name,
+            bg=color,
+            fg="white",
+            font=("Arial", 12, "bold"),
+            anchor="w",  # Align text to the left
+        )
+        label.pack(side="left", padx=5)
+        block.command_label = label  # Add reference to the block for easy access
+
+        # Add input fields dynamically based on the command's input requirements
+        inputs = COMMANDS[command_name]["inputs"]
+        input_vars = {}
+        for label_text, var_name in inputs.items():
+            tk.Label(
+                content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
+            ).pack(side="left", padx=5)
+            input_var = tk.StringVar()
+            tk.Entry(content_frame, textvariable=input_var, width=8).pack(
+                side="left", padx=5
+            )
+            input_vars[var_name] = input_var
+
+        # Store inputs in the block for later use
+        block.input_vars = input_vars
+
+        # Make the entire block draggable, including its child widgets
+        for widget in [block] + list(content_frame.winfo_children()):
+            widget.bind("<Button-1>", lambda e, b=block: self.on_drag_start(e, b))
+            widget.bind("<B1-Motion>", lambda e, b=block: self.on_drag_motion(e, b))
+            widget.bind("<ButtonRelease-1>", lambda e, b=block: self.on_drop(e, b))
+
+        # Set grid attributes
+        block.grid_row = row
+        block.grid_col = col
+        return block
+
+
+    def on_drag_start(self, event, block):
+        # Start dragging a block
+        self.drag_data["widget"] = block
+        self.drag_data["row"] = block.grid_row
+        self.drag_data["col"] = block.grid_col
+
+        # Temporarily free the current grid cell
+        self.grid_cells[block.grid_row][block.grid_col] = None
+
+        # Clear the highlight rectangle if it exists
+        self.clear_highlight()
+
+    def on_drag_motion(self, event, block):
+        # Handle motion of a dragged block
+        # Adjustments to account for consistent offset
+        fixed_offset_x = 260
+        fixed_offset_y = 80
+
+        # Calculate mouse position relative to the programming_area
+        x = (
+            self.programming_area.canvasx(event.x_root - self.frame.winfo_rootx())
+            - fixed_offset_x
+        )
+        y = (
+            self.programming_area.canvasy(event.y_root - self.frame.winfo_rooty())
+            - fixed_offset_y
+        )
+
+        # Constrain the cursor position within the grid
+        x = max(0, min(x, self.CELL_WIDTH - block.winfo_width()))
+        y = max(0, min(y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+
+        # Move the block to follow the cursor with adjusted position
+        block.place(x=x, y=y)
+
+        # Determine the row under the cursor
+        target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
+
+        # Highlight the target row
+        self.highlight_target_row(target_row)
+
+    def highlight_target_row(self, target_row):
+        # Highlight the target row
+        if self.highlight_rect:
+            self.programming_area.coords(
+                self.highlight_rect,
+                0,
+                target_row * self.CELL_HEIGHT,
+                self.CELL_WIDTH,
+                (target_row + 1) * self.CELL_HEIGHT,
+            )
+        else:
+            self.highlight_rect = self.programming_area.create_rectangle(
+                0,
+                target_row * self.CELL_HEIGHT,
+                self.CELL_WIDTH,
+                (target_row + 1) * self.CELL_HEIGHT,
+                outline="blue",
+                width=2,
+                dash=(4, 2),
+            )
+
+    def on_drop(self, event, block):
+        if block and self.highlight_rect:
+            coords = self.programming_area.coords(self.highlight_rect)
+            target_row = int(coords[1] // self.CELL_HEIGHT)
+
+            if self.grid_cells[target_row][0]:
+                self.move_blocks_down(target_row)
+
+            block.grid_row = target_row
+            block.grid_col = 0
+            self.grid_cells[target_row][0] = block
+            block.place(x=0, y=target_row * self.CELL_HEIGHT)
+
+            # Update the command list based on the new grid order
+            self.update_command_list()
+
+            self.move_blocks_up()
+            self.clear_highlight()
+        self.drag_data = {"widget": None, "row": None, "col": None}
+        print(self.command_list.__len__)
+        print(self.command_list)
+
+
+    def move_blocks_down(self, start_row):
+        # Move all blocks from start_row down by one row
+        # Add a new row if needed
+        if len(self.grid_cells) <= start_row:
+            self.add_row()
+
+        # Iterate from bottom to top, shifting blocks down
+        for row in range(len(self.grid_cells) - 1, start_row, -1):
+            if self.grid_cells[row - 1][0]:  # Check if the row above has a block
+                block = self.grid_cells[row - 1][0]
+                self.grid_cells[row][0] = block  # Move the block down
+                self.grid_cells[row - 1][0] = None  # Clear the original cell
+                block.grid_row = row
+                block.place(x=0, y=row * self.CELL_HEIGHT)
+
+    def move_blocks_up(self):
+        # Move blocks up recursively to fill all empty rows
+        moved = False  # Flag to track if any block was moved
+
+        # Iterate through all rows except the last
+        for row in range(len(self.grid_cells) - 1):
+            if (
+                not self.grid_cells[row][0] and self.grid_cells[row + 1][0]
+            ):  # If current row is empty and next row has a block
+                # Move the block from the next row up
+                block = self.grid_cells[row + 1][0]
+                self.grid_cells[row][0] = block
+                self.grid_cells[row + 1][0] = None
+                block.grid_row = row
+                block.place(x=0, y=row * self.CELL_HEIGHT)
+                moved = True
+
+        # If a block was moved, call the method recursively
+        if moved:
+            self.move_blocks_up()
+
+    def clear_highlight(self):
+        # Remove the highlight rectangle
+        if self.highlight_rect:
+            self.programming_area.delete(self.highlight_rect)
+            self.highlight_rect = None
+
+    import os
+
+    def handle_button_click(self, button_text):
+        if button_text == "Run":
+            self.run_program()
+        elif button_text == "Save":
+            file_name = self.file_name_entry.get().strip()  # Get file name from the text box
+            if file_name:
+                self.save_program(file_name)
+            else:
+                messagebox.showerror("Save Error", "Please enter a file name.")
+        elif button_text == "Load":
+            file_name = self.file_name_entry.get().strip()  # Get file name from the text box
+            if file_name:
+                self.load_program(file_name)
+            else:
+                messagebox.showerror("Load Error", "Please enter a file name.")
+        elif button_text == "Clear":
+            self.clear_programming_area()
+
+        elif button_text == "Home":
+            self.controller.show_page("StartScreen")
+
+        elif button_text in ["Undo", "Redo"]:
+            messagebox.showinfo("Info", f"{button_text} functionality coming soon!")
+            
+    def run_program(self):
+        commands_summary = []
+
+        for block in self.command_list:
+            # Get the command name directly from the block
+            command_name = block.command_label.cget("text")
+
+            # Collect inputs from the block
+            inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
+            input_details = ", ".join(f"{label}: {value}" for label, value in inputs.items())
+            commands_summary.append(f"{command_name} ({input_details})")
+
+        if commands_summary:
+            messagebox.showinfo("Commands and Values", "\n".join(commands_summary))
+        else:
+            messagebox.showinfo("Commands and Values", "No commands to display.")
+
+    def save_program(self, file_name):
+        os.makedirs("SavedFiles", exist_ok=True)  # Ensure the directory exists
+        if not file_name:
+            messagebox.showwarning("Save", "Please enter a valid file name.")
+            return
+
+        file_path = os.path.join("SavedFiles", f"{file_name}.txt")
+        try:
+            with open(file_path, "w") as file:
+                for block in self.command_list:
+                    command_name = block.command_label.cget("text")
+                    inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
+                    input_line = f"{command_name};" + ";".join(f"{k}={v}" for k, v in inputs.items()) + "\n"
+                    file.write(input_line)
+            messagebox.showinfo("Save", f"Program saved to {file_path}!")
+        except Exception as e:
+            messagebox.showerror("Save Error", f"Error saving program: {e}")
+
+
+
+    def load_program(self, file_name):
+        try:
+            # Clear the programming area before loading
+            self.clear_programming_area()
+            
+            file_path = os.path.join("SavedFiles", f"{file_name}.txt")
+            with open(file_path, "r") as file:
+                for line in file:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    # Split command and input data
+                    parts = line.split(";")
+                    command_name = parts[0]
+                    inputs = {}
+                    
+                    # Parse inputs
+                    for input_part in parts[1:]:
+                        key, value = input_part.split("=")
+                        inputs[key] = value
+                    
+                    # Validate the command exists
+                    if command_name not in COMMANDS:
+                        raise ValueError(f"Command '{command_name}' not found.")
+                    
+                    # Create the block using saved data
+                    command_data = COMMANDS[command_name]
+                    block = self.create_block_from_data(command_name, command_data["inputs"], inputs)
+                    
+                    # Find an empty row in the grid and place the block
+                    for row in range(len(self.grid_cells)):
+                        if not self.grid_cells[row][0]:  # Find the first empty row
+                            block.grid_row = row
+                            block.grid_col = 0
+                            block.place(x=0, y=row * self.CELL_HEIGHT)
+                            self.grid_cells[row][0] = block  # Update grid_cells
+                            break
+                    
+                    self.command_list.append(block)  # Add to command list
+                    self.move_blocks_up()
+            messagebox.showinfo("Load Success", f"Program '{file_name}.txt' loaded successfully.")
+        except FileNotFoundError:
+            messagebox.showerror("Load Error", f"File '{file_name}.txt' not found.")
+        except Exception as e:
+            messagebox.showerror("Load Error", f"Error loading program: {e}")
+
+
+
+    def create_block_from_data(self, command_name, expected_inputs, input_values):
+        # Get the module color or use a default
+        color = self.module_colors.get(command_name.split()[0], "#FF5733")
+
+        # Create a block
+        row = len(self.command_list)  # Place it at the next available row
+        col = 0
+        block = tk.Frame(
+            self.programming_area,
+            bg=color,
+            relief="raised",
+            bd=2,
+            width=self.CELL_WIDTH,
+            height=self.CELL_HEIGHT,
+        )
+        block.place(x=col * self.CELL_WIDTH, y=row * self.CELL_HEIGHT)
+
+        # Create a container frame for the block's content
+        content_frame = tk.Frame(block, bg=color)
+        content_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # Add command label
+        label = tk.Label(
+            content_frame,
+            text=command_name,
+            bg=color,
+            fg="white",
+            font=("Arial", 12, "bold"),
+            anchor="w",
+        )
+        label.pack(side="left", padx=5)
+        block.command_label = label  # Add reference to the block for easy access
+
+        # Add input fields dynamically based on the expected inputs
+        input_vars = {}
+        for label_text, var_name in expected_inputs.items():
+            tk.Label(
+                content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
+            ).pack(side="left", padx=5)
+            input_var = tk.StringVar(value=input_values.get(var_name, ""))  # Set saved value
+            tk.Entry(content_frame, textvariable=input_var, width=8).pack(
+                side="left", padx=5
+            )
+            input_vars[var_name] = input_var
+
+        # Store inputs in the block for later use
+        block.input_vars = input_vars
+
+        # Set grid attributes
+        block.grid_row = row
+        block.grid_col = col
+
+        return block
+
+
+    def create_command_label(self, command_name):
+        """Helper to create a dummy label for loading commands."""
+        return tk.Label(
+            self.command_section,
+            text=command_name,
+            bg="white",  # Default color
+            fg="black",
+            font=("Arial", 10),
+        )
+
+    def clear_programming_area(self):
+        # Clear all commands from the programming area
+        for widget in self.programming_area.winfo_children():
+            widget.destroy()
+        self.grid_cells = [
+            [None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)
+        ]
+
+    def add_row(self):
+        # Add a new row to the grid and adjust the canvas size
+        self.grid_cells.append([None for _ in range(self.GRID_COLS)])
+
+        # Calculate the new height of the canvas content
+        new_height = len(self.grid_cells) * self.CELL_HEIGHT
+        self.canvas_content.config(height=new_height)
+
+        # Update the scroll region of the canvas
+        self.update_scroll_region()
+
+    def check_and_add_rows(self):
+        # Check if additional rows are needed and add them dynamically
+        # Count the number of empty rows
+        empty_rows = sum(1 for row in self.grid_cells if row[0] is None)
+
+        # Add more rows if fewer than 2 rows are empty
+        if empty_rows < 2:
+            self.add_row()
+
+    def update_scroll_region(self):
+        # Update the scroll region of the canvas
+        self.programming_area.update_idletasks()  # Ensure the canvas has the latest layout
+        self.programming_area.config(
+            scrollregion=self.programming_area.bbox("all")
+        )  # Adjust the scroll region
+
+    def on_mouse_wheel(self, event):
+        # Handle mouse wheel scrolling in the programming area
+        self.programming_area.yview_scroll(-1 * (event.delta // 120), "units")
+
+    def update_command_list(self):
+        self.command_list = [self.grid_cells[row][0] for row in range(len(self.grid_cells)) if self.grid_cells[row][0]];
+        print(self.command_list)

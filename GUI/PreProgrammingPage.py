@@ -7,11 +7,7 @@ import os
 
 class PreProgrammingPage:
     # TODO: 
-    # Buttons should be able to be used multiple times (Clear seems to break everything)
-    # Command list needs updated on undo and redo
-    # Run needs to show a warning when no var in value
-    # 
-    
+    # Run needs to show a warning when no var in value    
     
     # Programming grid setup
     GRID_ROWS = 10
@@ -207,9 +203,12 @@ class PreProgrammingPage:
                 content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
             ).pack(side="left", padx=5)
             input_var = tk.StringVar()
-            tk.Entry(content_frame, textvariable=input_var, width=8).pack(
-                side="left", padx=5
-            )
+            
+            # Add an event listener to capture changes
+            input_entry = tk.Entry(content_frame, textvariable=input_var, width=8)
+            input_entry.pack(side="left", padx=5)
+            input_entry.bind("<KeyRelease>", lambda e: self.capture_input_change())
+            
             input_vars[var_name] = input_var
 
         # Store inputs in the block for later use
@@ -228,6 +227,9 @@ class PreProgrammingPage:
 
 
     def on_drag_start(self, event, block):
+        self.undo_list.append(self.capture_state())
+        self.redo_list.clear()
+        
         # Start dragging a block
         self.drag_data["widget"] = block
         self.drag_data["row"] = block.grid_row
@@ -290,41 +292,33 @@ class PreProgrammingPage:
             )
 
     def on_drop(self, event, block):
-        self.undo_list.append(self.capture_state())
-        self.redo_list.clear()
+        """Capture state only if a block was actually moved."""
         if block and self.highlight_rect:
             coords = self.programming_area.coords(self.highlight_rect)
             target_row = int(coords[1] // self.CELL_HEIGHT)
 
-            # Check if the target row is occupied
+            # Move block into position
             if self.grid_cells[target_row][0]:
                 self.move_blocks_down(target_row)
 
-            # Place the block in the target row
             block.grid_row = target_row
             block.grid_col = 0
             self.grid_cells[target_row][0] = block
             block.place(x=0, y=target_row * self.CELL_HEIGHT)
+            
+            # Capture only if the position has changed
+            if block.grid_row != target_row:
+                new_state = self.capture_state()
+                if new_state and (not self.undo_list or self.undo_list[-1] != new_state):
+                    self.undo_list.append(new_state)
+                    self.redo_list.clear()
 
-            # Update the command list based on the new grid order
             self.update_command_list()
-
-            # Fill empty rows by moving blocks up
             self.move_blocks_up()
-        else:
-            # Restore the block to its original position if not placed
-            original_row = self.drag_data["row"]
-            original_col = self.drag_data["col"]
 
-            if original_row is not None and original_col is not None:
-                block.grid_row = original_row
-                block.grid_col = original_col
-                self.grid_cells[original_row][original_col] = block
-                block.place(x=0, y=original_row * self.CELL_HEIGHT)
-
-        # Reset drag data and clear highlight
         self.drag_data = {"widget": None, "row": None, "col": None}
         self.clear_highlight()
+
 
     def move_blocks_down(self, start_row):
         # Move all blocks from start_row down by one row
@@ -391,7 +385,7 @@ class PreProgrammingPage:
 
         elif button_text == "Undo":
             self.undo_last_action()
-        elif button_text == "Undo":
+        elif button_text == "Redo":
             self.redo_last_action()
             
     def run_program(self):
@@ -478,60 +472,77 @@ class PreProgrammingPage:
             messagebox.showerror("Load Error", f"Error loading program: {e}")
             
     def undo_last_action(self):
-        # Restore the last state
         if not self.undo_list:
             messagebox.showinfo("Undo", "Nothing to undo")
             return
-        print("Undo" + self.undo_list)
-        print("Redo" + self.redo_list)
-        self.redo_list.append(self.capture_state())
-        print("Undo" + self.undo_list)
-        print("Redo" + self.redo_list)
-        
+
+        # Capture current state before undoing, ensuring it's not a duplicate
+        current_state = self.capture_state()
+        if current_state and (not self.redo_list or self.redo_list[-1] != current_state):
+            self.redo_list.append(current_state)
+
         last_state = self.undo_list.pop()
         self.restore_state(last_state)
-        
+
     def redo_last_action(self):
-        # Restore the last undone state
         if not self.redo_list:
-            messagebox.showinfo("Redo", "Nothing to Redo")
+            messagebox.showinfo("Redo", "Nothing to redo")
             return
-        
-        print("Undo" + self.undo_list)
-        print("Redo" + self.redo_list)
-        self.undo_list.append(self.capture_state())
-        print("Undo" + self.undo_list)
-        print("Redo" + self.redo_list)
-        
+
+        # Capture current state before redoing, ensuring it's not a duplicate
+        current_state = self.capture_state()
+        if current_state and (not self.undo_list or self.undo_list[-1] != current_state):
+            self.undo_list.append(current_state)
+
         last_state = self.redo_list.pop()
         self.restore_state(last_state)
 
     def capture_state(self):
-        # Capture the current state of the programming area
+        """Capture the current state, ensuring it is not a duplicate of the last recorded state."""
         state = []
-        for block in self.command_list:
-            command_name = block.command_label.cget("text")
-            inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
-            state.append((command_name, inputs))
+        for row in range(len(self.grid_cells)):
+            block = self.grid_cells[row][0]
+            if block:
+                command_name = block.command_label.cget("text")
+                inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
+                state.append((command_name, inputs, row))  # Store row position
+
+        if self.undo_list and self.undo_list[-1] == state:
+            return None  # Prevent redundant states
+
         return state
+
+
+
+    
+    def capture_input_change(self):
+        """Capture state when a user modifies an input field."""
+        self.undo_list.append(self.capture_state())
+        self.redo_list.clear()
+
     
     def restore_state(self, state):
-        # Restore the programming area to a previous state.
-        self.clear_programming_area()  # Clear the current programming area
-        for command_name, inputs in state:
+        """Restore a previous state of the programming area."""
+        self.clear_programming_area()
+
+        for command_name, inputs, row in state:
             if command_name not in COMMANDS:
-                messagebox.showerror("Load Error", f"Command '{command_name}' not found.")
+                messagebox.showerror("Restore Error", f"Command '{command_name}' not found.")
                 continue
+
+            # Create block using stored data
             command_data = COMMANDS[command_name]
             block = self.create_block_from_data(command_name, command_data["inputs"], inputs)
+
+            # Place block in the correct row
+            self.grid_cells[row][0] = block
+            block.grid_row = row
+            block.grid_col = 0
+            block.place(x=0, y=row * self.CELL_HEIGHT)
+
             self.command_list.append(block)
-            for row in range(len(self.grid_cells)):
-                if not self.grid_cells[row][0]:  # Place block in the first empty row
-                    block.grid_row = row
-                    block.grid_col = 0
-                    self.grid_cells[row][0] = block
-                    block.place(x=0, y=row * self.CELL_HEIGHT)
-                    break
+
+        self.move_blocks_up()  # Ensure blocks are positioned correctly
 
     def create_block_from_data(self, command_name, expected_inputs, input_values):
         # Get the module color or use a default

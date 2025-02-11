@@ -1,38 +1,58 @@
-def forward(distance, velocity):
-    return f"Move Forward {distance} meters {velocity} m/s"
-
-
-def backward(distance, velocity):
-    return f"Move Backward {distance} meters {velocity} m/s"
-
-
-def turn_left(degrees):
-    return f"Turn Left {degrees} degrees"
-
-
-def turn_right(degrees):
-    return f"Turn Right {degrees} degrees"
-
+from utils import send_command
 
 COMMANDS = {
-    "Forward": {
-        "func": forward,
-        "inputs": {"Distance (meters)": "distance"
-        , "Velocity (m/s)": "velocity"},
+    "Move Forward": {
+        "function": lambda speed, distance: send_command(
+            "/cmd_vel",
+            {"linear": {"x": float(speed), "y": 0.0, "z": 0.0},
+             "angular": {"x": 0.0, "y": 0.0, "z": 0.0}},
+            duration=float(distance) / float(speed)
+        ),
+        "inputs": {"Speed": "speed", "Distance": "distance"},
+        "topic": "/cmd_vel"
     },
-    "Backward": {
-        "func": backward,
-        "inputs": {"Distance (meters)": "distance"
-        , "Velocity (m/s)": "velocity"},
+    "Move Backward": {
+        "function": lambda speed, distance: send_command(
+            "/cmd_vel",
+            {"linear": {"x": -float(speed), "y": 0.0, "z": 0.0},
+             "angular": {"x": 0.0, "y": 0.0, "z": 0.0}},
+            duration=float(distance) / float(speed)
+        ),
+        "inputs": {"Speed": "speed", "Distance": "distance"},
+        "topic": "/cmd_vel"
     },
-    "Turn Left": {
-        "func": turn_left,
-        "inputs": {"Degrees": "degrees"},
+    "Rotate Left": {
+        "function": lambda speed, angle: send_command(
+            "/cmd_vel",
+            {"linear": {"x": 0.0, "y": 0.0, "z": 0.0},
+             "angular": {"x": 0.0, "y": 0.0, "z": float(speed)}},
+            duration=float(angle) / float(speed)
+        ),
+        "inputs": {"Speed": "speed", "Angle": "angle"},
+        "topic": "/cmd_vel"
     },
-    "Turn Right": {
-        "func": turn_right,
-        "inputs": {"Degrees": "degrees"},
+    "Rotate Right": {
+        "function": lambda speed, angle: send_command(
+            "/cmd_vel",
+            {"linear": {"x": 0.0, "y": 0.0, "z": 0.0},
+             "angular": {"x": 0.0, "y": 0.0, "z": -float(speed)}},
+            duration=float(angle) / float(speed)
+        ),
+        "inputs": {"Speed": "speed", "Angle": "angle"},
+        "topic": "/cmd_vel"
     },
+    "Stop": {
+        "function": lambda: send_command(
+            "/cmd_vel",
+            {"linear": {"x": 0.0, "y": 0.0, "z": 0.0},
+             "angular": {"x": 0.0, "y": 0.0, "z": 0.0}}
+        ),
+        "inputs": {},
+        "topic": "/cmd_vel"
+    }
 }
+
+
+
 
 colour = "#FF5733"

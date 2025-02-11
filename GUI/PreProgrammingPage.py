@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from utils import load_modules
+from utils import send_command
 from Modules.movement import COMMANDS
 import os
+import time
 
 
 class PreProgrammingPage:
@@ -389,20 +391,40 @@ class PreProgrammingPage:
             self.redo_last_action()
             
     def run_program(self):
-        commands_summary = []
+        """Navigates to the Observation Page before executing commands."""
+        self.controller.show_page("ObservationPage")
+
+        # Execute the commands after switching pages
+        self.frame.after(500, self.execute_commands)  # Delay to allow UI update
+
+    def execute_commands(self):
+        """Executes the commands in the order they appear in the grid."""
+        
         for block in self.command_list:
-            # Get the command name directly from the block
             command_name = block.command_label.cget("text")
 
-            # Collect inputs from the block
-            inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}                
-            input_details = ", ".join(f"{label}: {value}" for label, value in inputs.items())
-            commands_summary.append(f"{command_name} ({input_details})")
+            # Ensure the command exists in COMMANDS
+            if command_name not in COMMANDS:
+                messagebox.showerror("Execution Error", f"Unknown command: {command_name}")
+                continue
 
-        if commands_summary:
-            messagebox.showinfo("Commands and Values", "\n".join(commands_summary))
-        else:
-            messagebox.showinfo("Commands and Values", "No commands to display.")
+            command_info = COMMANDS[command_name]
+            inputs = {var_name: float(var.get()) for var_name, var in block.input_vars.items() if var.get().strip()}  # Ensure conversion to float
+
+            try:
+                print(f"[DEBUG] Running: {command_name} with {inputs}")
+
+                # Extract topic and message format
+                if "topic" in command_info:
+                    topic = command_info["topic"]  
+                    message = command_info["function"](*inputs.values())
+
+                    # Send the command with extracted inputs
+                    send_command(topic, message, duration=inputs.get("duration", 0))
+
+            except Exception as e:
+                messagebox.showerror("Execution Error", f"Error running {command_name}: {e}")
+
 
     def save_program(self, file_name):
         os.makedirs("SavedFiles", exist_ok=True)  # Ensure the directory exists

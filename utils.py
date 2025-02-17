@@ -1,96 +1,50 @@
+import rospy
+import importlib
 import os
-import subprocess
-import websocket
-import json
-import time
 
-# Global publisher dictionary
+# Dictionary to store publishers
 publishers = {}
 
-def get_wsl_ip():
-    """Gets the current WSL IP address dynamically."""
-    try:
-        # Run a WSL command to get the eth0 IP address
-        result = subprocess.run(
-            ["wsl", "ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"],
-            capture_output=True, text=True, shell=True
-        )
-        wsl_ip = result.stdout.strip()
-        if wsl_ip:
-            return wsl_ip
-    except Exception as e:
-        print(f"Error getting WSL IP: {e}")
-    return "127.0.0.1"  # Default to localhost if WSL IP cannot be found
+def initialize_ros():
+    """Initializes ROS and sets up publishers for multiple topics."""
+    if not rospy.core.is_initialized():
+        rospy.init_node("tiago_gui", anonymous=True)
 
-# Set ROSBridge connection dynamically
-ROSBRIDGE_IP = get_wsl_ip()
-ROSBRIDGE_PORT = 9090
-ROSBRIDGE_URL = f"ws://{ROSBRIDGE_IP}:{ROSBRIDGE_PORT}"
+def get_publisher(topic, msg_type):
+    """Returns a publisher for the given topic and message type, creating one if needed."""
+    if topic not in publishers:
+        publishers[topic] = rospy.Publisher(topic, msg_type, queue_size=10)
+        rospy.sleep(0.5)  # Allow publisher to register
+    return publishers[topic]
 
+def send_command(topic, msg_type, message=None, **kwargs):
+    """
+    Publishes a message to a given topic.
 
-def send_command(topic, message, duration=None):
-    """Sends a command to ROS via WebSockets and stops after duration (if needed)."""
-    ws = websocket.WebSocket()
-    ws.connect(ROSBRIDGE_URL)
+    :param topic: The ROS topic to publish to.
+    :param msg_type: The message type (e.g., Twist, String).
+    :param message: A pre-built message (optional).
+    :param kwargs: The fields and values for the message if not using a pre-built message.
+    """
+    if rospy.is_shutdown():
+        rospy.logerr("ROS is not running!")
+        return
 
-    # Send the actual command
-    command_msg = {"op": "publish", "topic": topic, "msg": message}
-    ws.send(json.dumps(command_msg))
-    print(f"[DEBUG] Sent to {topic}: {message}")
+    pub = get_publisher(topic, msg_type)
 
-    # If duration is provided, wait and then stop the robot
-    if duration and duration > 0:
-        time.sleep(duration)
-        stop_msg = {"op": "publish", "topic": topic, "msg": {
-            "linear": {"x": 0.0, "y": 0.0, "z": 0.0},
-            "angular": {"x": 0.0, "y": 0.0, "z": 0.0}
-        }}
-        ws.send(json.dumps(stop_msg))
-        print(f"[DEBUG] Stopped movement on {topic}")
+    # If a raw message object is provided, publish it directly
+    if message:
+        pub.publish(message)
+        return
 
-    ws.close()
+    # Otherwise, construct the message from kwargs
+    msg = msg_type()
+    
+    for key, value in kwargs.items():
+        field_path = key.split('.')
+        sub_msg = msg
+        for sub_field in field_path[:-1]:  # Navigate into nested fields
+            sub_msg = getattr(sub_msg, sub_field)
+        setattr(sub_msg, field_path[-1], value)  # Assign the final value
 
-def stop_robot(ws=None):
-    """Stops the robot by sending zero velocity."""
-    stop_msg = {
-        "op": "publish",
-        "topic": "/cmd_vel",
-        "msg": {
-            "linear": {"x": 0.0, "y": 0.0, "z": 0.0},
-            "angular": {"x": 0.0, "y": 0.0, "z": 0.0}
-        }
-    }
-
-    try:
-        if ws is None:
-            ws = websocket.WebSocket()
-            ws.connect(ROSBRIDGE_URL)
-
-        ws.send(json.dumps(stop_msg))
-        ws.close()
-        print("[DEBUG] Emergency stop sent!")
-    except Exception as e:
-        print(f"[ERROR] Failed to send stop command: {e}")
-
-
-
-def load_modules():
-    """Loads commands and colors from all module files dynamically."""
-    import importlib
-    modules = {}
-    modules_path = "Modules"  # Path to the modules folder
-    for file in os.listdir(modules_path):
-        if file.endswith(".py") and file != "__init__.py":
-            module_name = file[:-3]  # Remove .py extension
-            try:
-                module = importlib.import_module(f"Modules.{module_name}")
-                commands = getattr(module, "COMMANDS", {})
-                color = getattr(module, "colour", "#000000")  # Default color is black
-                modules[module_name] = {"commands": commands, "color": color}
-            except AttributeError as e:
-                print(f"Error loading {module_name}: {e}")
-    return modules
-
-def publish_command(command):
-    """Publishes a command to ROS topic via WebSockets."""
-    send_command("/robot_command", {"data": command})
+    pub.publish(msg)

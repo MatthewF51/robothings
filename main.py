@@ -2,6 +2,7 @@ from GUI.GUI import GUIController
 
 
 def main():
+    
     controller = GUIController()
     controller.run()
 

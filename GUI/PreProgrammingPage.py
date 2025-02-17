@@ -409,21 +409,41 @@ class PreProgrammingPage:
                 continue
 
             command_info = COMMANDS[command_name]
-            inputs = {var_name: float(var.get()) for var_name, var in block.input_vars.items() if var.get().strip()}  # Ensure conversion to float
+            topic = command_info.get("topic")  # Extract topic
+            msg_type = command_info.get("msg_type")  # Extract message type function
+            
+            # Ensure inputs are valid
+            inputs = {}
+            for var_name, var in block.input_vars.items():
+                try:
+                    inputs[var_name] = float(var.get())  # Convert all inputs to float
+                except ValueError:
+                    messagebox.showerror("Execution Error", f"Invalid input for {var_name} in {command_name}")
+                    return
 
             try:
-                print(f"[DEBUG] Running: {command_name} with {inputs}")
+                print(f"[DEBUG] Running: {command_name} on {topic} with {inputs}")
 
-                # Extract topic and message format
-                if "topic" in command_info:
-                    topic = command_info["topic"]  
-                    message = command_info["function"](*inputs.values())
+                # Construct the message
+                message = msg_type()  # Create a blank ROS message
+                for key, value in inputs.items():
+                    setattr(message, key, value)  # Assign inputs dynamically
 
-                    # Send the command with extracted inputs
-                    send_command(topic, message, duration=inputs.get("duration", 0))
+                # Get duration (if specified), default to 0 if not provided
+                duration = inputs.get("duration", 0)
+
+                # Send the command
+                send_command(topic, message)
+
+                # Stop the command after duration if necessary
+                if duration > 0:
+                    time.sleep(duration)
+                    stop_msg = msg_type()  # Create a stop message (default values = zero)
+                    send_command(topic, stop_msg)
 
             except Exception as e:
                 messagebox.showerror("Execution Error", f"Error running {command_name}: {e}")
+
 
 
     def save_program(self, file_name):

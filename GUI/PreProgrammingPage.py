@@ -390,38 +390,41 @@ class PreProgrammingPage:
         elif button_text == "Redo":
             self.redo_last_action()
             
-    def run_program(self):
-        """Executes the commands using send_command()."""
-        self.controller.show_page("ObservationPage")  # Navigate to Observation Page
-    
+    import threading
+
+def run_program(self):
+    """Executes the commands using send_command() in a background thread."""
+    self.controller.show_page("ObservationPage")  # Navigate to Observation Page
+
+    def execute_commands():
+        """Executes commands without blocking the UI."""
         for block in self.command_list:
             command_name = block.command_label.cget("text")
-    
-            # Ensure the command exists in COMMANDS
+
             if command_name not in COMMANDS:
                 messagebox.showerror("Execution Error", f"Unknown command: {command_name}")
                 continue
-    
+
             command_info = COMMANDS[command_name]
-            command_function = command_info.get("function")  # Get the function
-    
-            # Ensure inputs are valid
+            command_function = command_info.get("function")
+
             inputs = {}
             for var_name, var in block.input_vars.items():
                 try:
-                    inputs[var_name] = float(var.get())  # Convert inputs to float
+                    inputs[var_name] = float(var.get())  # Convert to float
                 except ValueError:
                     messagebox.showerror("Execution Error", f"Invalid input for {var_name} in {command_name}")
                     return
-    
+
             try:
                 print(f"[DEBUG] Running: {command_name} with {inputs}")
-    
-                # Call the function, which internally calls send_command()
-                command_function(*inputs.values())
-    
+                command_function(*inputs.values())  # Run the command function
             except Exception as e:
                 messagebox.showerror("Execution Error", f"Error running {command_name}: {e}")
+
+    # Run command execution in a separate thread
+    threading.Thread(target=execute_commands, daemon=True).start()
+
     
 
 

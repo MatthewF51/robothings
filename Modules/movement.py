@@ -3,10 +3,10 @@ from geometry_msgs.msg import Twist
 
 COMMANDS = {
     "Move Forward": {
-        "function": lambda cunt, distance: send_command(
+        "function": lambda speed, distance: send_command(
             "/cmd_vel",
             Twist,
-            linear_x=float(cunt),
+            linear_x=float(speed),
             angular_z=0.0
         ),
         "inputs": {"Speed": "speed", "Distance": "distance"},

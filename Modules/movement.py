@@ -6,18 +6,26 @@ COMMANDS = {
         "function": lambda speed, distance: send_command(
             "/cmd_vel",
             Twist,
-            linear_x=float(speed),
+            linear_x=float(speed),  # ✅ Correct field name
+            linear_y=0.0,
+            linear_z=0.0,
+            angular_x=0.0,
+            angular_y=0.0,
             angular_z=0.0
         ),
         "inputs": {"Speed": "speed", "Distance": "distance"},
-        "topic": "mobile_base_controller/cmd_vel",
+        "topic": "/cmd_vel",
         "msg_type": Twist
     },
     "Move Backward": {
         "function": lambda speed, distance: send_command(
             "/cmd_vel",
             Twist,
-            linear_x=-float(speed),
+            linear_x=-float(speed),  # ✅ Correct field name
+            linear_y=0.0,
+            linear_z=0.0,
+            angular_x=0.0,
+            angular_y=0.0,
             angular_z=0.0
         ),
         "inputs": {"Speed": "speed", "Distance": "distance"},
@@ -29,7 +37,11 @@ COMMANDS = {
             "/cmd_vel",
             Twist,
             linear_x=0.0,
-            angular_z=float(speed)
+            linear_y=0.0,
+            linear_z=0.0,
+            angular_x=0.0,
+            angular_y=0.0,
+            angular_z=float(speed)  # ✅ Correct field name
         ),
         "inputs": {"Speed": "speed", "Angle": "angle"},
         "topic": "/cmd_vel",
@@ -40,7 +52,11 @@ COMMANDS = {
             "/cmd_vel",
             Twist,
             linear_x=0.0,
-            angular_z=-float(speed)
+            linear_y=0.0,
+            linear_z=0.0,
+            angular_x=0.0,
+            angular_y=0.0,
+            angular_z=-float(speed)  # ✅ Correct field name
         ),
         "inputs": {"Speed": "speed", "Angle": "angle"},
         "topic": "/cmd_vel",
@@ -51,6 +67,10 @@ COMMANDS = {
             "/cmd_vel",
             Twist,
             linear_x=0.0,
+            linear_y=0.0,
+            linear_z=0.0,
+            angular_x=0.0,
+            angular_y=0.0,
             angular_z=0.0
         ),
         "inputs": {},

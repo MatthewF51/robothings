@@ -1,5 +1,6 @@
 import rospy
 import importlib
+import subprocess
 import os
 
 # Dictionary to store publishers
@@ -17,43 +18,19 @@ def get_publisher(topic, msg_type):
         rospy.sleep(0.5)  # Allow publisher to register
     return publishers[topic]
 
-def send_command(topic, msg_type, **kwargs):
+
+def send_command(command):
     """
-    Publishes a message to a given topic.
+    Sends a ROS command to the terminal.
 
-    :param topic: The ROS topic to publish to.
-    :param msg_type: The message type (e.g., Twist, String).
-    :param kwargs: The fields and values for the message.
+    :param command: The full ROS command as a string (e.g., "rostopic pub /cmd_vel geometry_msgs/Twist ...").
     """
-    if rospy.is_shutdown():
-        rospy.logerr("ROS is not running!")
-        return
+    try:
+        print(f"Executing: {command}")  # Debugging output
+        subprocess.run(command, shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {e}")
 
-    pub = get_publisher(topic, msg_type)
-    msg = msg_type()  # Create an instance of the message type
-
-    # Dynamically set message attributes
-    for key, value in kwargs.items():
-        # Convert field names (linear_x → linear.x)
-        key = key.replace("_", ".")  # ✅ Ensure proper ROS nested field format
-        
-        field_path = key.split(".")
-        sub_msg = msg
-
-        for sub_field in field_path[:-1]:  # Navigate to nested field
-            if hasattr(sub_msg, sub_field):
-                sub_msg = getattr(sub_msg, sub_field)
-            else:
-                rospy.logwarn(f"Invalid field '{key}' for message type {msg_type}")
-                return
-
-        if hasattr(sub_msg, field_path[-1]):  # Assign final value
-            setattr(sub_msg, field_path[-1], value)
-        else:
-            rospy.logwarn(f"Invalid field '{key}' for message type {msg_type}")
-            return
-
-    pub.publish(msg)
 
 def load_modules():
     """Dynamically loads modules from the 'Modules' folder."""

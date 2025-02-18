@@ -391,15 +391,9 @@ class PreProgrammingPage:
             self.redo_last_action()
             
     def run_program(self):
-        """Navigates to the Observation Page before executing commands."""
-        self.controller.show_page("ObservationPage")
-
-        # Execute the commands after switching pages
-        self.frame.after(500, self.execute_commands)  # Delay to allow UI update
-
-    def execute_commands(self):
-        """Executes the commands in the order they appear in the grid."""
-        
+        """Executes the commands using send_command()."""
+        self.controller.show_page("ObservationPage")  # Navigate to Observation Page
+    
         for block in self.command_list:
             command_name = block.command_label.cget("text")
     
@@ -409,32 +403,26 @@ class PreProgrammingPage:
                 continue
     
             command_info = COMMANDS[command_name]
-            topic = command_info.get("topic")  # Extract topic
-            msg_type = command_info.get("msg_type")  # Extract message type
-    
-            if not topic or not msg_type:
-                messagebox.showerror("Execution Error", f"Command '{command_name}' is missing topic or message type.")
-                continue
+            command_function = command_info.get("function")  # Get the function
     
             # Ensure inputs are valid
             inputs = {}
             for var_name, var in block.input_vars.items():
                 try:
-                    inputs[var_name] = float(var.get())  # Convert all inputs to float
+                    inputs[var_name] = float(var.get())  # Convert inputs to float
                 except ValueError:
                     messagebox.showerror("Execution Error", f"Invalid input for {var_name} in {command_name}")
                     return
     
             try:
-                print(f"[DEBUG] Running: {command_name} on {topic} with {inputs}")
+                print(f"[DEBUG] Running: {command_name} with {inputs}")
     
-                # Send the command using send_command()
-                send_command(topic, msg_type, **inputs)
+                # Call the function, which internally calls send_command()
+                command_function(*inputs.values())
     
             except Exception as e:
                 messagebox.showerror("Execution Error", f"Error running {command_name}: {e}")
-
-
+    
 
 
     def save_program(self, file_name):

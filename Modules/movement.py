@@ -11,7 +11,7 @@ COMMANDS = {
             duration=float(distance) / float(speed)
         ),
         "inputs": {"Speed": "speed", "Distance": "distance"},
-        "topic": "/cmd_vel",
+        "topic": "mobile_base_controller/cmd_vel",
         "msg_type": Twist
     },
     "Move Backward": {

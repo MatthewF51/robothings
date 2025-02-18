@@ -1,14 +1,13 @@
 from utils import send_command
-from geometry_msgs.msg import Twist  # Import correct ROS message type
+from geometry_msgs.msg import Twist
 
 COMMANDS = {
     "Move Forward": {
         "function": lambda speed, distance: send_command(
-            "mobile_base_controller/cmd_vel",
+            "/cmd_vel",
             Twist,
-            linear={"x": float(speed), "y": 0.0, "z": 0.0},
-            angular={"x": 0.0, "y": 0.0, "z": 0.0},
-            duration=float(distance) / float(speed)
+            linear_x=float(speed),
+            angular_z=0.0
         ),
         "inputs": {"Speed": "speed", "Distance": "distance"},
         "topic": "mobile_base_controller/cmd_vel",
@@ -18,9 +17,8 @@ COMMANDS = {
         "function": lambda speed, distance: send_command(
             "/cmd_vel",
             Twist,
-            linear={"x": -float(speed), "y": 0.0, "z": 0.0},
-            angular={"x": 0.0, "y": 0.0, "z": 0.0},
-            duration=float(distance) / float(speed)
+            linear_x=-float(speed),
+            angular_z=0.0
         ),
         "inputs": {"Speed": "speed", "Distance": "distance"},
         "topic": "/cmd_vel",
@@ -30,9 +28,8 @@ COMMANDS = {
         "function": lambda speed, angle: send_command(
             "/cmd_vel",
             Twist,
-            linear={"x": 0.0, "y": 0.0, "z": 0.0},
-            angular={"x": 0.0, "y": 0.0, "z": float(speed)},
-            duration=float(angle) / float(speed)
+            linear_x=0.0,
+            angular_z=float(speed)
         ),
         "inputs": {"Speed": "speed", "Angle": "angle"},
         "topic": "/cmd_vel",
@@ -42,9 +39,8 @@ COMMANDS = {
         "function": lambda speed, angle: send_command(
             "/cmd_vel",
             Twist,
-            linear={"x": 0.0, "y": 0.0, "z": 0.0},
-            angular={"x": 0.0, "y": 0.0, "z": -float(speed)},
-            duration=float(angle) / float(speed)
+            linear_x=0.0,
+            angular_z=-float(speed)
         ),
         "inputs": {"Speed": "speed", "Angle": "angle"},
         "topic": "/cmd_vel",
@@ -54,8 +50,8 @@ COMMANDS = {
         "function": lambda: send_command(
             "/cmd_vel",
             Twist,
-            linear={"x": 0.0, "y": 0.0, "z": 0.0},
-            angular={"x": 0.0, "y": 0.0, "z": 0.0}
+            linear_x=0.0,
+            angular_z=0.0
         ),
         "inputs": {},
         "topic": "/cmd_vel",

@@ -4,7 +4,7 @@ from geometry_msgs.msg import Twist  # Import correct ROS message type
 COMMANDS = {
     "Move Forward": {
         "function": lambda speed, distance: send_command(
-            "/cmd_vel",
+            "mobile_base_controller/cmd_vel",
             Twist,
             linear={"x": float(speed), "y": 0.0, "z": 0.0},
             angular={"x": 0.0, "y": 0.0, "z": 0.0},

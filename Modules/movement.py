@@ -1,3 +1,5 @@
+from utils import send_command
+
 COMMANDS = {
     "Move Forward": {
         "function": lambda speed, distance: send_command(

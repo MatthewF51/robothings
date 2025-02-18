@@ -32,27 +32,28 @@ def send_command(topic, msg_type, **kwargs):
     pub = get_publisher(topic, msg_type)
     msg = msg_type()  # Create an instance of the message type
 
-    # Set attributes dynamically
+    # Dynamically set message attributes
     for key, value in kwargs.items():
-        keys = key.split(".")
+        # Convert field names (linear_x → linear.x)
+        key = key.replace("_", ".")  # ✅ Ensure proper ROS nested field format
+        
+        field_path = key.split(".")
         sub_msg = msg
 
-        for sub_key in keys[:-1]:  # Navigate to the correct subfield
-            if hasattr(sub_msg, sub_key):
-                sub_msg = getattr(sub_msg, sub_key)
+        for sub_field in field_path[:-1]:  # Navigate to nested field
+            if hasattr(sub_msg, sub_field):
+                sub_msg = getattr(sub_msg, sub_field)
             else:
                 rospy.logwarn(f"Invalid field '{key}' for message type {msg_type}")
                 return
 
-        if hasattr(sub_msg, keys[-1]):  # Assign final value
-            setattr(sub_msg, keys[-1], value)
+        if hasattr(sub_msg, field_path[-1]):  # Assign final value
+            setattr(sub_msg, field_path[-1], value)
         else:
             rospy.logwarn(f"Invalid field '{key}' for message type {msg_type}")
             return
 
     pub.publish(msg)
-
-
 
 def load_modules():
     """Dynamically loads modules from the 'Modules' folder."""

@@ -3,7 +3,7 @@ from utils import send_command
 COMMANDS = {
     "Move Forward": {
         "function": lambda speed, distance: send_command(
-            f"rostopic pub -1 /cmd_vel geometry_msgs/Twist '{{linear: {{x: {speed}, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: 0.0}}}}'"
+            f"rostopic pub mobile_base_controller/cmd_vel geometry_msgs/Twist '{{linear: {{x: {speed}, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: 0.0}}}}'"
         ),
         "inputs": {"Speed": "speed", "Distance": "distance"},
     },

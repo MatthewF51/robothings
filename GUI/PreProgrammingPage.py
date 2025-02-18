@@ -392,40 +392,40 @@ class PreProgrammingPage:
             
     import threading
 
-def run_program(self):
-    """Executes the commands using send_command() in a background thread."""
-    self.controller.show_page("ObservationPage")  # Navigate to Observation Page
-
-    def execute_commands():
-        """Executes commands without blocking the UI."""
-        for block in self.command_list:
-            command_name = block.command_label.cget("text")
-
-            if command_name not in COMMANDS:
-                messagebox.showerror("Execution Error", f"Unknown command: {command_name}")
-                continue
-
-            command_info = COMMANDS[command_name]
-            command_function = command_info.get("function")
-
-            inputs = {}
-            for var_name, var in block.input_vars.items():
-                try:
-                    inputs[var_name] = float(var.get())  # Convert to float
-                except ValueError:
-                    messagebox.showerror("Execution Error", f"Invalid input for {var_name} in {command_name}")
-                    return
-
-            try:
-                print(f"[DEBUG] Running: {command_name} with {inputs}")
-                command_function(*inputs.values())  # Run the command function
-            except Exception as e:
-                messagebox.showerror("Execution Error", f"Error running {command_name}: {e}")
-
-    # Run command execution in a separate thread
-    threading.Thread(target=execute_commands, daemon=True).start()
-
+    def run_program(self):
+        """Executes the commands using send_command() in a background thread."""
+        self.controller.show_page("ObservationPage")  # Navigate to Observation Page
     
+        def execute_commands():
+            """Executes commands without blocking the UI."""
+            for block in self.command_list:
+                command_name = block.command_label.cget("text")
+    
+                if command_name not in COMMANDS:
+                    messagebox.showerror("Execution Error", f"Unknown command: {command_name}")
+                    continue
+    
+                command_info = COMMANDS[command_name]
+                command_function = command_info.get("function")
+    
+                inputs = {}
+                for var_name, var in block.input_vars.items():
+                    try:
+                        inputs[var_name] = float(var.get())  # Convert to float
+                    except ValueError:
+                        messagebox.showerror("Execution Error", f"Invalid input for {var_name} in {command_name}")
+                        return
+    
+                try:
+                    print(f"[DEBUG] Running: {command_name} with {inputs}")
+                    command_function(*inputs.values())  # Run the command function
+                except Exception as e:
+                    messagebox.showerror("Execution Error", f"Error running {command_name}: {e}")
+    
+        # Run command execution in a separate thread
+        threading.Thread(target=execute_commands, daemon=True).start()
+    
+        
 
 
     def save_program(self, file_name):

@@ -27,26 +27,40 @@ def send_command(topic, msg_type, message=None, **kwargs):
     :param kwargs: The fields and values for the message if not using a pre-built message.
     """
     if rospy.is_shutdown():
-        rospy.logerr("ROS is not running!")
+        rospy.logerr("[ERROR] ROS is not running!")
         return
 
     pub = get_publisher(topic, msg_type)
 
     # If a raw message object is provided, publish it directly
     if message:
+        rospy.loginfo(f"[INFO] Publishing pre-built message to {topic}")
         pub.publish(message)
         return
 
     # Otherwise, construct the message from kwargs
     msg = msg_type()
-    
+
     for key, value in kwargs.items():
         field_path = key.split('.')
         sub_msg = msg
-        for sub_field in field_path[:-1]:  # Navigate into nested fields
-            sub_msg = getattr(sub_msg, sub_field)
-        setattr(sub_msg, field_path[-1], value)  # Assign the final value
 
+        try:
+            # Navigate into nested fields
+            for sub_field in field_path[:-1]:  
+                if hasattr(sub_msg, sub_field):
+                    sub_msg = getattr(sub_msg, sub_field)
+                else:
+                    rospy.logerr(f"[ERROR] Field '{sub_field}' not found in {msg_type}")
+                    return
+            
+            # Assign the final value
+            setattr(sub_msg, field_path[-1], value)
+        except AttributeError as e:
+            rospy.logerr(f"[ERROR] Failed to set attribute {key} in {msg_type}: {e}")
+            return
+
+    rospy.loginfo(f"[INFO] Publishing to {topic}: {msg}")
     pub.publish(msg)
 
 def load_modules():

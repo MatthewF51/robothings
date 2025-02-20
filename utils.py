@@ -1,23 +1,9 @@
-import rospy
 import importlib
 import subprocess
 import os
 
 # Dictionary to store publishers
 publishers = {}
-
-def initialize_ros():
-    """Initializes ROS and sets up publishers for multiple topics."""
-    if not rospy.core.is_initialized():
-        rospy.init_node("tiago_gui", anonymous=True)
-
-def get_publisher(topic, msg_type):
-    """Returns a publisher for the given topic and message type, creating one if needed."""
-    if topic not in publishers:
-        publishers[topic] = rospy.Publisher(topic, msg_type, queue_size=10)
-        rospy.sleep(0.5)  # Allow publisher to register
-    return publishers[topic]
-
 
 def send_command(command):
     """

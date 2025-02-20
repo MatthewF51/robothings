@@ -5,8 +5,6 @@ from utils import send_command
 import threading
 from Modules.movement import COMMANDS
 import os
-import time
-
 
 class PreProgrammingPage:
     # TODO: 

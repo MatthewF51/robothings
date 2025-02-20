@@ -3,10 +3,11 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 import cv2
 import threading
-import rospy
-from sensor_msgs.msg import Image as ROSImage
-from cv_bridge import CvBridge
-from geometry_msgs.msg import Twist
+import rospy # type: ignore
+from sensor_msgs.msg import Image as ROSImage # type: ignore
+from cv_bridge import CvBridge # type: ignore
+from geometry_msgs.msg import Twist # type: ignore
+import os
 
 # ROS Topic for Tiago's Camera
 CAMERA_TOPIC = "/xtion/rgb/image_raw"

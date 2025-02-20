@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox
 from utils import load_modules
 from utils import send_command
 import threading
-from Modules.movement import COMMANDS
+from Modules.Movement import COMMANDS
 import os
 
 class PreProgrammingPage:

@@ -3,11 +3,12 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 import cv2
 import threading
-import rospy # type: ignore
-from sensor_msgs.msg import Image as ROSImage # type: ignore
-from cv_bridge import CvBridge # type: ignore
-from geometry_msgs.msg import Twist # type: ignore
+import rospy  # type: ignore
+from sensor_msgs.msg import Image as ROSImage  # type: ignore
+from cv_bridge import CvBridge  # type: ignore
+from geometry_msgs.msg import Twist  # type: ignore
 import os
+import time
 
 # ROS Topic for Tiago's Camera
 CAMERA_TOPIC = "/xtion/rgb/image_raw"
@@ -18,16 +19,17 @@ class ObservationPage:
         self.root = root
         self.controller = controller
         self.frame = tk.Frame(root, bg="white")
-        
+
         # Video feed variables
         self.video_label = None
         self.bridge = CvBridge()
         self.running = True  # Flag for video stream
-
+        self.progress_value = tk.DoubleVar()  # Progress bar value
+        
         # ROS Setup
         rospy.init_node("observation_page", anonymous=True)
         self.video_subscriber = rospy.Subscriber(CAMERA_TOPIC, ROSImage, self.update_video_feed)
-        
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -67,6 +69,13 @@ class ObservationPage:
         box_d = tk.LabelFrame(middle_frame, text="Command Log", bg="white", font=("Arial", 10, "bold"))
         box_d.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 
+        # 🔄 Progress Bar
+        self.progress_bar = ttk.Progressbar(box_d, variable=self.progress_value, maximum=100, mode="determinate")
+        self.progress_bar.pack(fill="x", padx=10, pady=10)
+
+        self.progress_label = tk.Label(box_d, text="Execution Progress: 0%", bg="white", font=("Arial", 10))
+        self.progress_label.pack(pady=5)
+
     def update_video_feed(self, ros_image):
         """Receives and updates video feed from ROS camera topic."""
         try:
@@ -79,6 +88,12 @@ class ObservationPage:
             self.video_label.image = photo  # Prevent garbage collection
         except Exception as e:
             rospy.logerr(f"Error processing video frame: {e}")
+
+    def update_progress(self, percent):
+        """Updates the progress bar dynamically."""
+        self.progress_value.set(percent)
+        self.progress_label.config(text=f"Execution Progress: {int(percent)}%")
+        self.root.update_idletasks()  # Ensure smooth UI update
 
     def emergency_stop(self):
         """🔴 Emergency Stop - Stops all robot movement and disables controllers"""
@@ -107,6 +122,25 @@ class ObservationPage:
         except Exception as e:
             rospy.logerr(f"Emergency Stop Failed: {e}")
             messagebox.showerror("Emergency Stop Error", f"Failed to stop robot: {e}")
+
+    def execute_commands_with_progress(self, commands):
+        """
+        Executes commands while updating the progress bar.
+        :param commands: List of commands to execute.
+        """
+        total_commands = len(commands)
+        if total_commands == 0:
+            messagebox.showinfo("Execution Complete", "No commands to execute.")
+            return
+
+        for index, command in enumerate(commands):
+            command()  # Execute the command
+            progress = ((index + 1) / total_commands) * 100
+            self.update_progress(progress)
+            time.sleep(0.5)  # Simulate execution delay
+
+        messagebox.showinfo("Execution Complete", "All commands have been executed.")
+        self.update_progress(100)
 
     def stop_video_stream(self):
         """Stops the video feed and closes the stream."""

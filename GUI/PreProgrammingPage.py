@@ -1,15 +1,12 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from utils import load_modules
-from utils import send_command
+from utils import load_modules, send_command
 import threading
 from Modules.Movement import COMMANDS
 import os
+import time
 
 class PreProgrammingPage:
-    # TODO: 
-    # Run needs to show a warning when no var in value    
-    
     # Programming grid setup
     GRID_ROWS = 10
     GRID_COLS = 1
@@ -21,25 +18,14 @@ class PreProgrammingPage:
         self.frame = tk.Frame(container, bg="white")
         self.controller = controller
 
-        # For drag-and-drop tracking
-        self.drag_data = {
-            "widget": None,
-            "row": None,
-            "col": None,
-        }
-
-        # To store colors for modules
-        self.module_colors = {}
+        # Drag-and-drop tracking
+        self.drag_data = {"widget": None, "row": None, "col": None}
 
         # Grid tracking
-        self.grid_cells = [
-            [None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)
-        ]
-        
-        self.command_list = []  # List to maintain the order of blocks
-        
-        self.undo_list = [] # List to maintain the recent actions
-        self.redo_list = [] # List to maintain the recent actions that were undone
+        self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
+        self.command_list = []  
+        self.undo_list = []  
+        self.redo_list = []  
 
         # To handle row highlighting
         self.highlight_rect = None
@@ -47,30 +33,23 @@ class PreProgrammingPage:
 
     def setup_ui(self):
         self.frame.rowconfigure([0, 1], weight=1)
-        self.frame.columnconfigure(0, weight=1)
-        self.frame.columnconfigure(1, weight=5)
-        self.frame.columnconfigure(2, weight=2)
+        self.frame.columnconfigure(0, weight=1)  # Commands section
+        self.frame.columnconfigure(1, weight=4)  # Programming area (reduced width)
+        self.frame.columnconfigure(2, weight=2)  # Log area
 
-        # Box A: Commands list (Vertical Left)
-        self.command_section = tk.LabelFrame(
-            self.frame,
-            text="Commands",
-            bg="white",
-            fg="black",
-            font=("Arial", 10, "bold"),
-        )
+        # Box A: Commands list
+        self.command_section = tk.LabelFrame(self.frame, text="Commands", bg="white", font=("Arial", 10, "bold"))
         self.command_section.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=5, pady=5)
         self.populate_command_section(self.command_section)
 
-
-        # Middle frame
+        # Middle frame (Programming area)
         middle_frame = tk.Frame(self.frame, bg="white")
         middle_frame.grid(row=0, column=1, rowspan=2, sticky="nsew", padx=5, pady=5)
         middle_frame.rowconfigure(0, weight=0)
         middle_frame.rowconfigure(1, weight=1)
         middle_frame.columnconfigure(0, weight=1)
 
-        # Box B: Functional buttons
+        # Functional buttons
         box_b = tk.Frame(middle_frame, bg="white", height=50)
         box_b.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         button_colors = {
@@ -83,20 +62,11 @@ class PreProgrammingPage:
             "Run": "#32CD32",
         }
         for btn_text, btn_color in button_colors.items():
-            tk.Button(
-                box_b,
-                text=btn_text,
-                bg=btn_color,
-                fg="white",
-                width=10,
-                font=("Arial", 10, "bold"),
-                command=lambda t=btn_text: self.handle_button_click(t),
-            ).pack(side="left", padx=10, pady=5)
+            tk.Button(box_b, text=btn_text, bg=btn_color, fg="white", width=10, font=("Arial", 10, "bold"),
+                      command=lambda t=btn_text: self.handle_button_click(t)).pack(side="left", padx=10, pady=5)
 
         # File name input
-        tk.Label(
-            box_b, text="File Name:", bg="white", font=("Arial", 10)
-        ).pack(side="left", padx=5)
+        tk.Label(box_b, text="File Name:", bg="white", font=("Arial", 10)).pack(side="left", padx=5)
         self.file_name_entry = tk.Entry(box_b, width=20, font=("Arial", 10))
         self.file_name_entry.pack(side="left", padx=10)
         self.file_name_entry.insert(0, "program")  # Default file name
@@ -108,14 +78,9 @@ class PreProgrammingPage:
         self.scrollbar = ttk.Scrollbar(programming_frame, orient="vertical")
         self.scrollbar.pack(side="right", fill="y")
 
-        self.programming_area = tk.Canvas(
-            programming_frame,
-            bg="lightgray",
-            width=self.CELL_WIDTH,
-            height=self.GRID_ROWS * self.CELL_HEIGHT,
-            highlightthickness=0,
-            yscrollcommand=self.scrollbar.set,
-        )
+        self.programming_area = tk.Canvas(programming_frame, bg="lightgray",
+                                          width=self.CELL_WIDTH, height=self.GRID_ROWS * self.CELL_HEIGHT,
+                                          highlightthickness=0, yscrollcommand=self.scrollbar.set)
         self.programming_area.pack(side="left", fill="both", expand=True)
         self.scrollbar.config(command=self.programming_area.yview)
 
@@ -124,6 +89,24 @@ class PreProgrammingPage:
 
         self.programming_area.bind("<MouseWheel>", self.on_mouse_wheel)
         self.update_scroll_region()
+
+        # **Box D: Log Area**
+        self.log_section = tk.LabelFrame(self.frame, text="Action Log", bg="white", font=("Arial", 10, "bold"))
+        self.log_section.grid(row=0, column=2, rowspan=2, sticky="nsew", padx=5, pady=5)
+
+        self.log_text = tk.Text(self.log_section, wrap="word", height=20, state="disabled", bg="lightgray")
+        self.log_text.pack(fill="both", expand=True, padx=5, pady=5)
+        self.log_scroll = ttk.Scrollbar(self.log_section, command=self.log_text.yview)
+        self.log_scroll.pack(side="right", fill="y")
+        self.log_text.config(yscrollcommand=self.log_scroll.set)
+
+    def log_action(self, message):
+        """Appends a message to the log section."""
+        self.log_text.config(state="normal")
+        self.log_text.insert("end", f"{message}\n")
+        self.log_text.config(state="disabled")
+        self.log_text.yview("end")  # Auto-scroll to the latest log
+
 
     def populate_command_section(self, command_frame):
         modules_commands = load_modules()
@@ -364,26 +347,26 @@ class PreProgrammingPage:
             self.highlight_rect = None
 
     def handle_button_click(self, button_text):
+        """Handles button clicks and logs actions."""
+        self.log_action(f"Button clicked: {button_text}")
         if button_text == "Run":
             self.run_program()
         elif button_text == "Save":
-            file_name = self.file_name_entry.get().strip()  # Get file name from the text box
+            file_name = self.file_name_entry.get().strip()
             if file_name:
                 self.save_program(file_name)
             else:
                 messagebox.showerror("Save Error", "Please enter a file name.")
         elif button_text == "Load":
-            file_name = self.file_name_entry.get().strip()  # Get file name from the text box
+            file_name = self.file_name_entry.get().strip()
             if file_name:
                 self.load_program(file_name)
             else:
                 messagebox.showerror("Load Error", "Please enter a file name.")
         elif button_text == "Clear":
             self.clear_programming_area()
-
         elif button_text == "Home":
             self.controller.show_page("StartScreen")
-
         elif button_text == "Undo":
             self.undo_last_action()
         elif button_text == "Redo":
@@ -392,36 +375,35 @@ class PreProgrammingPage:
     import threading
 
     def run_program(self):
-        """Executes the commands using send_command() in a background thread."""
-        self.controller.show_page("ObservationPage")  # Navigate to Observation Page
-    
+        """Executes commands using send_command() in a background thread and logs it."""
+        self.controller.show_page("ObservationPage")
+        self.log_action("Program started...")
+
         def execute_commands():
             """Executes commands without blocking the UI."""
             for block in self.command_list:
                 command_name = block.command_label.cget("text")
-    
                 if command_name not in COMMANDS:
-                    messagebox.showerror("Execution Error", f"Unknown command: {command_name}")
+                    self.log_action(f"Error: Unknown command {command_name}")
                     continue
-    
+
                 command_info = COMMANDS[command_name]
                 command_function = command_info.get("function")
-    
+
                 inputs = {}
                 for var_name, var in block.input_vars.items():
                     try:
                         inputs[var_name] = float(var.get())  # Convert to float
                     except ValueError:
-                        messagebox.showerror("Execution Error", f"Invalid input for {var_name} in {command_name}")
+                        self.log_action(f"Invalid input for {var_name} in {command_name}")
                         return
-    
+
                 try:
-                    print(f"[DEBUG] Running: {command_name} with {inputs}")
+                    self.log_action(f"Executing: {command_name} with {inputs}")
                     command_function(*inputs.values())  # Run the command function
                 except Exception as e:
-                    messagebox.showerror("Execution Error", f"Error running {command_name}: {e}")
-    
-        # Run command execution in a separate thread
+                    self.log_action(f"Error running {command_name}: {e}")
+
         threading.Thread(target=execute_commands, daemon=True).start()
     
         
@@ -661,16 +643,14 @@ class PreProgrammingPage:
         if empty_rows < 2:
             self.add_row()
 
-    def update_scroll_region(self):
-        # Update the scroll region of the canvas
-        self.programming_area.update_idletasks()  # Ensure the canvas has the latest layout
-        self.programming_area.config(
-            scrollregion=self.programming_area.bbox("all")
-        )  # Adjust the scroll region
-
     def on_mouse_wheel(self, event):
-        # Handle mouse wheel scrolling in the programming area
+        """Handles mouse wheel scrolling."""
         self.programming_area.yview_scroll(-1 * (event.delta // 120), "units")
+
+    def update_scroll_region(self):
+        """Updates the canvas scroll region."""
+        self.programming_area.update_idletasks()
+        self.programming_area.config(scrollregion=self.programming_area.bbox("all"))
 
     def update_command_list(self):
         # Update the list of commands

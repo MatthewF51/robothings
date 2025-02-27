@@ -9,6 +9,8 @@ from cv_bridge import CvBridge  # type: ignore
 from geometry_msgs.msg import Twist  # type: ignore
 import os
 import time
+import signal
+from tkinter import messagebox
 
 # ROS Topic for Tiago's Camera
 CAMERA_TOPIC = "/xtion/rgb/image_raw"
@@ -96,11 +98,19 @@ class ObservationPage:
         self.root.update_idletasks()  # Ensure smooth UI update
 
     def emergency_stop(self):
-        """🔴 Emergency Stop - Stops all robot movement and disables controllers"""
+        """🔴 Emergency Stop - Stops all robot movement and disables controllers using Ctrl-C."""
         try:
-            rospy.logwarn("🚨 Emergency Stop Activated! Stopping all movement.")
+            rospy.logwarn("🚨 Emergency Stop Activated! Sending Ctrl-C to stop running processes.")
 
-            # 1️⃣ Stop all movement by publishing zero velocity
+            # 1️⃣ Find and kill movement-related ROS nodes
+            os.system("rosnode kill /move_base")  # Navigation node (if running)
+            os.system("rosnode kill /teleop_twist_keyboard")  # Teleoperation node (if running)
+
+            # 2️⃣ Send Ctrl-C to stop all running processes
+            os.kill(os.getpid(), signal.SIGINT)  
+
+            # 3️⃣ Ensure robot stops completely by publishing zero velocity
+            rospy.sleep(1)  # Give time for the kill command to take effect
             stop_twist = Twist()
             pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
             pub.publish(stop_twist)
@@ -114,24 +124,6 @@ class ObservationPage:
             rospy.logerr(f"Emergency Stop Failed: {e}")
             messagebox.showerror("Emergency Stop Error", f"Failed to stop robot: {e}")
 
-    def execute_commands_with_progress(self, commands):
-        """
-        Executes commands while updating the progress bar.
-        :param commands: List of commands to execute.
-        """
-        total_commands = len(commands)
-        if total_commands == 0:
-            messagebox.showinfo("Execution Complete", "No commands to execute.")
-            return
-
-        for index, command in enumerate(commands):
-            command()  # Execute the command
-            progress = ((index + 1) / total_commands) * 100
-            self.update_progress(progress)
-            time.sleep(0.5)  # Simulate execution delay
-
-        messagebox.showinfo("Execution Complete", "All commands have been executed.")
-        self.update_progress(100)
 
     def stop_video_stream(self):
         """Stops the video feed and closes the stream."""

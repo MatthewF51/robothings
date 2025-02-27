@@ -1,15 +1,15 @@
-import keyboard
+from pynput import keyboard
 import subprocess
 
 # Base Movement Commands
 
 linear_speed = 0.0  # Forward/Backward movement
 angular_speed = 0.0  # Left/Right rotation
-speed_step = 0.1  # Step size for speed changes
+speed_step = 1.0  # Step size for speed changes
 
 def move_base():
     """Send velocity command to Tiago's base."""
-    command = f"""rostopic pub /cmd_vel geometry_msgs/Twist '
+    command = f"""rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist '
 linear:
   x: {linear_speed}
   y: 0.0
@@ -20,6 +20,7 @@ angular:
   z: {angular_speed}'"""
     
     subprocess.run(command, shell=True, text=True)
+    subprocess.run("CTRL+C",shell=True,text=True)
 
 def moveForward():
     global linear_speed
@@ -169,7 +170,18 @@ def toggle_emergency_stop():
         print("EMERGENCY STOP DEACTIVATED")
 
 # Base Movement Keys
-keyboard.add_hotkey('w', moveForward)
+def on_press(key):
+
+    if key.char == 'w':
+        moveForward()
+    if key.char == 'a':
+        turnLeft()
+    if key.char == 's':
+        moveBackward()
+    if key.char == 'd':
+        turnRight()        
+
+"""
 keyboard.add_hotkey('a', turnLeft)
 keyboard.add_hotkey('s', moveBackward)
 keyboard.add_hotkey('d', turnRight)
@@ -193,7 +205,13 @@ keyboard.add_hotkey("f", speak)
 
 # Emergency Stop Key
 keyboard.add_hotkey("shift+e", toggle_emergency_stop)
+"""
 
 print("Press 'F' to type a message for Tiago to say. Press 'Esc' to exit.")
 
-keyboard.wait('esc')  # Wait for 'esc' key to exit
+#keyboard.wait('esc')  # Wait for 'esc' key to exit
+
+with keyboard.Listener(on_press=on_press) as listener:
+    running = True
+    while (running):
+        listener.join()

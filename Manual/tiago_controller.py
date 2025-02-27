@@ -96,27 +96,35 @@ while running:
         elif event.type == pygame.JOYAXISMOTION:
             if event.axis == AXIS_LEFT_Y:
                 linear_speed = -event.value  # Invert Y-axis for forward/backward
+                send_cmd_vel(linear_speed, angular_speed)
             elif event.axis == AXIS_LEFT_X:
                 angular_speed = event.value  # Left = negative, Right = positive
+                send_cmd_vel(linear_speed, angular_speed)
             elif event.axis == AXIS_RIGHT_X:
                 head_pan = event.value * MAX_HEAD_SPEED  # Move head left/right
+                send_head_command(head_pan, head_tilt)
             elif event.axis == AXIS_RIGHT_Y:
                 head_tilt = -event.value * MAX_HEAD_SPEED  # Move head up/down
+                send_head_command(head_pan, head_tilt)
             elif event.axis == AXIS_RT:
                 grip_position += GRIP_STEP  # Tighten grip
                 if grip_position > 1.0:
                     grip_position = 1.0  # Max closed
+                send_grip_command(grip_position)
             elif event.axis == AXIS_LT:
                 grip_position -= GRIP_STEP  # Loosen grip
                 if grip_position < 0.0:
                     grip_position = 0.0  # Fully open
+                send_grip_command(grip_position)
 
         elif event.type == pygame.JOYHATMOTION:
             dpad = event.value
             if dpad == DPAD_UP:
                 torso_height += TOROSO_STEP
+                send_torso_command(torso_height)
             elif dpad == DPAD_DOWN:
                 torso_height -= TOROSO_STEP
+                send_torso_command(torso_height)
 
         elif event.type == pygame.JOYBUTTONDOWN:
             if event.button == BUTTON_A:
@@ -138,10 +146,8 @@ while running:
     linear_speed = round(linear_speed * MAX_LINEAR_SPEED, 2)
     angular_speed = round(angular_speed * MAX_ANGULAR_SPEED, 2)
 
-    # Send movement commands
-    send_cmd_vel(linear_speed, angular_speed)
-    send_head_command(head_pan, head_tilt)
-    send_torso_command(torso_height)
-    send_grip_command(grip_position)
+   
+    
+    
 
 pygame.quit()

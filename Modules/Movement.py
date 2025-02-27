@@ -1,8 +1,9 @@
 import threading
 from utils import send_command
 
-# Set a fixed rotation speed in rad/s
-FIXED_ROTATION_SPEED = 0.5  # Adjust this if needed
+# Constants
+FIXED_ROTATION_SPEED = 0.1  # rad/s
+COMPENSATION_TIME = 0.2  # Extra time to account for delay
 
 COMMANDS = {
     "Move Forward": {
@@ -11,7 +12,7 @@ COMMANDS = {
             args=(
                 f"rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist "
                 f"'{{linear: {{x: 0.5, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: 0.0}}}}' -r 10",
-                float(distance) / 0.5  # Speed is fixed at 0.5 m/s
+                (float(distance) / 0.5) + COMPENSATION_TIME  # Compensate for delay
             ),
             daemon=True
         ).start(),
@@ -23,7 +24,7 @@ COMMANDS = {
             args=(
                 f"rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist "
                 f"'{{linear: {{x: -0.5, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: 0.0}}}}' -r 10",
-                float(distance) / 0.5
+                (float(distance) / 0.5) + COMPENSATION_TIME
             ),
             daemon=True
         ).start(),
@@ -35,11 +36,11 @@ COMMANDS = {
             args=(
                 f"rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist "
                 f"'{{linear: {{x: 0.0, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: {FIXED_ROTATION_SPEED}}}}}' -r 10",
-                (float(degrees) * 3.14159265 / 180) / FIXED_ROTATION_SPEED  # Convert degrees to radians and calculate duration
+                ((float(degrees) * 3.14159265 / 180) / FIXED_ROTATION_SPEED) + COMPENSATION_TIME
             ),
             daemon=True
         ).start(),
-        "inputs": {"Degrees": "degrees"},  # User inputs only degrees
+        "inputs": {"Degrees": "degrees"},
     },
     "Rotate Right": {
         "function": lambda degrees: threading.Thread(
@@ -47,11 +48,11 @@ COMMANDS = {
             args=(
                 f"rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist "
                 f"'{{linear: {{x: 0.0, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: {-FIXED_ROTATION_SPEED}}}}}' -r 10",
-                (float(degrees) * 3.14159265 / 180) / FIXED_ROTATION_SPEED
+                ((float(degrees) * 3.14159265 / 180) / FIXED_ROTATION_SPEED) + COMPENSATION_TIME
             ),
             daemon=True
         ).start(),
-        "inputs": {"Degrees": "degrees"},  # User inputs only degrees
+        "inputs": {"Degrees": "degrees"},
     },
     "Stop": {
         "function": lambda: send_command(

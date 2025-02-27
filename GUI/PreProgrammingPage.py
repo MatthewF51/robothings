@@ -29,6 +29,9 @@ class PreProgrammingPage:
 
         # To handle row highlighting
         self.highlight_rect = None
+        
+        self.module_colors = {}
+        
         self.setup_ui()
 
     def setup_ui(self):

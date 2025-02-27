@@ -108,15 +108,6 @@ class ObservationPage:
             pub = rospy.Publisher("/mobile_base_controller/cmd_vel", Twist, queue_size=10)
             pub.publish(stop_twist)
 
-            pub = rospy.Publisher("/twist_mux", Twist, queue_size=10)
-            pub.publish(stop_twist)
-
-            # 2️⃣ Disable movement controllers
-            os.system("rosservice call /controller_manager/switch_controller '{start_controllers: [], stop_controllers: [\"mobile_base_controller\"], strictness: 2}'")
-
-            # 3️⃣ Cancel any navigation goals
-            os.system("rosservice call /move_base/cancel_goal '{}'")
-
             messagebox.showinfo("Emergency Stop", "🚨 All robot functions stopped!")
 
         except Exception as e:

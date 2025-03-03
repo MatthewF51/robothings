@@ -94,6 +94,7 @@ class PreProgrammingPage:
         programming_frame = tk.Frame(middle_frame, bg="white")
         programming_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 
+        # Scrollbar for the programming area
         self.scrollbar = ttk.Scrollbar(programming_frame, orient="vertical")
         self.scrollbar.pack(side="right", fill="y")
 
@@ -103,18 +104,25 @@ class PreProgrammingPage:
             width=self.CELL_WIDTH,
             height=self.GRID_ROWS * self.CELL_HEIGHT,
             highlightthickness=0,
-            yscrollcommand=self.scrollbar.set,
+            yscrollcommand=self.scrollbar.set,  # 🔹 Link canvas scrolling to scrollbar
         )
         self.programming_area.pack(side="left", fill="both", expand=True)
+
+        # Configure scrollbar to scroll the canvas
         self.scrollbar.config(command=self.programming_area.yview)
 
+        # Create the inner frame inside the canvas
         self.canvas_content = tk.Frame(self.programming_area, bg="lightgray")
-        self.programming_area.create_window(
+        self.inner_window = self.programming_area.create_window(
             (0, 0), window=self.canvas_content, anchor="nw"
         )
 
-        self.programming_area.bind("<MouseWheel>", self.on_mouse_wheel)
-        self.update_scroll_region()
+        # Bind scrolling
+        self.canvas_content.bind("<Configure>", lambda e: self.programming_area.config(scrollregion=self.programming_area.bbox("all")))
+
+        # Remove mouse wheel binding so it only works with the scrollbar
+        self.programming_area.unbind_all("<MouseWheel>")
+
 
         # Box D: Log Area
         self.log_section = tk.LabelFrame(

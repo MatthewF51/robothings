@@ -112,7 +112,7 @@ class PreProgrammingPage:
 
 
     def populate_command_section(self, command_frame):
-        modules_commands = load_modules()  # Ensure this loads all modules correctly
+        modules_commands = load_modules()  # Load all available modules
 
         for module_name, module_data in modules_commands.items():
             commands = module_data["commands"]
@@ -120,12 +120,15 @@ class PreProgrammingPage:
 
             print(f"📦 Loading Module: {module_name}, Available Commands: {list(commands.keys())}")  # Debugging print
 
+            module_label = tk.Label(command_frame, text=module_name, font=("Arial", 10, "bold"))
+            module_label.pack(pady=5)
+
             for command_name in commands.keys():
                 print(f"🔹 Adding command: '{command_name}' from Module: {module_name}")  # Debugging print
 
                 command_label = tk.Label(
                     command_frame,
-                    text=command_name.strip(),  # Ensure no extra spaces
+                    text=command_name.strip(),
                     bg=color,
                     fg="white",
                     font=("Arial", 10),
@@ -135,8 +138,9 @@ class PreProgrammingPage:
                 )
                 command_label.pack(pady=2, padx=5, fill="x")
 
-                # Ensure the correct COMMANDS dictionary is used
+                # Ensure correct module is passed when clicking the command
                 command_label.bind("<Button-1>", lambda e, label=command_label, mod=commands: self.add_block_to_grid(label, mod))
+
 
 
     def add_block_to_grid(self, command_label, command_module):
@@ -154,18 +158,18 @@ class PreProgrammingPage:
         self.add_block_to_grid(command_label, command_module)
 
 
+
     def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()
-        
-        # Ensure we are getting the correct module
+
         print(f"🛠 Creating block for '{command_name}' from module {command_module}")  # Debugging print
 
+        # Ensure correct module reference
         if command_name not in command_module:
             print(f"🚨 Error: '{command_name}' not found in module. Available: {list(command_module.keys())}")
             return None
 
         inputs = command_module[command_name].get("inputs", {})
-
         print(f"🎤 Inputs for '{command_name}': {inputs}")  # Debugging print
 
         color = command_label.cget("bg")
@@ -186,8 +190,11 @@ class PreProgrammingPage:
         input_vars = {}
 
         for label_text, var_name in inputs.items():
-            print(f"🎤 Adding input field: {label_text} -> {var_name}")  # Debugging print
+            if not isinstance(var_name, str):  # Validate input field
+                print(f"🚨 Error: Unexpected input key '{var_name}' in {command_name}. Skipping.")
+                continue
 
+            print(f"🎤 Adding input field: {label_text} -> {var_name}")  # Debugging print
             tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
 
             input_var = tk.StringVar()
@@ -200,7 +207,13 @@ class PreProgrammingPage:
         block.grid_row = row
         block.grid_col = col
 
+        # 🛠 Restore drag & drop logic (if it was missing)
+        block.bind("<Button-1>", lambda e, b=block: self.on_drag_start(e, b))
+        block.bind("<B1-Motion>", lambda e, b=block: self.on_drag_motion(e, b))
+        block.bind("<ButtonRelease-1>", lambda e, b=block: self.on_drop(e, b))
+
         return block
+
 
     """
     def create_block(self, command_label, row, col):
@@ -439,6 +452,7 @@ class PreProgrammingPage:
             """Executes commands without blocking the UI."""
             for block in self.command_list:
                 command_name = block.command_label.cget("text")
+
                 if command_name not in COMMANDS:
                     self.log_action(f"Error: Unknown command {command_name}")
                     continue
@@ -448,19 +462,18 @@ class PreProgrammingPage:
 
                 inputs = {}
                 for var_name, var in block.input_vars.items():
-                    try:
-                        inputs[var_name] = float(var.get())  # Convert to float
-                    except ValueError:
-                        self.log_action(f"Invalid input for {var_name} in {command_name}")
-                        return
+                    input_value = var.get().strip()
+                    print(f"Executing: {command_name} with {var_name}: {input_value}")  # Debugging
+                    inputs[var_name] = input_value
 
                 try:
                     self.log_action(f"Executing: {command_name} with {inputs}")
-                    command_function(*inputs.values())  # Run the command function
+                    command_function(*inputs.values())  # Run the function with input
                 except Exception as e:
                     self.log_action(f"Error running {command_name}: {e}")
 
         threading.Thread(target=execute_commands, daemon=True).start()
+
     
         
 

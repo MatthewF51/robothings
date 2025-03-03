@@ -102,21 +102,8 @@ class ObservationPage:
         try:
             rospy.logwarn("🚨 Emergency Stop Activated! Sending Ctrl-C to stop running processes.")
 
-            # 1️⃣ Find and kill movement-related ROS nodes
-            os.system("rosnode kill /move_base")  # Navigation node (if running)
-            os.system("rosnode kill /teleop_twist_keyboard")  # Teleoperation node (if running)
-
-            # 2️⃣ Send Ctrl-C to stop all running processes
+            # Send Ctrl-C to stop all running processes
             os.kill(os.getpid(), signal.SIGINT)  
-
-            # 3️⃣ Ensure robot stops completely by publishing zero velocity
-            rospy.sleep(1)  # Give time for the kill command to take effect
-            stop_twist = Twist()
-            pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
-            pub.publish(stop_twist)
-
-            pub = rospy.Publisher("/mobile_base_controller/cmd_vel", Twist, queue_size=10)
-            pub.publish(stop_twist)
 
             messagebox.showinfo("Emergency Stop", "🚨 All robot functions stopped!")
 

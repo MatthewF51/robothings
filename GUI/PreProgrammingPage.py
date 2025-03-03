@@ -459,24 +459,38 @@ class PreProgrammingPage:
                     print(f"🚨 Error: Block at row {block.grid_row} has no command_name!")
                     continue
 
+                print(f"▶ Running Command: {command_name}")  # Debugging print
+
                 if command_name not in COMMANDS:
+                    print(f"🚨 Error: '{command_name}' not found in COMMANDS! Available: {list(COMMANDS.keys())}")
                     self.log_action(f"Error: Unknown command {command_name}")
                     continue
 
                 command_info = COMMANDS[command_name]
                 command_function = command_info.get("function")
 
+                print(f"🛠 Function Retrieved: {command_function}")  # Debugging print
+
+                # Fetch input values
                 inputs = {}
                 for var_name, var in block.input_vars.items():
                     input_value = var.get().strip()
-                    print(f"Executing: {command_name} with {var_name}: {input_value}")  # Debugging
+                    print(f"🔹 Input for {command_name}: {var_name} = '{input_value}'")  # Debugging print
                     inputs[var_name] = input_value
 
                 try:
+                    print(f"🚀 Executing: {command_name} with inputs {inputs}")  # Debugging print
                     self.log_action(f"Executing: {command_name} with {inputs}")
-                    command_function(*inputs.values())  # Run the function with input
+                    command_function(*inputs.values())  # Run the function with inputs
                 except Exception as e:
+                    print(f"❌ Execution Failed for {command_name}: {e}")
                     self.log_action(f"Error running {command_name}: {e}")
+
+        # 🔹 Start execute_commands in a new thread so it doesn't freeze the UI
+        import threading
+        threading.Thread(target=execute_commands, daemon=True).start()
+
+
 
 
     def save_program(self, file_name):

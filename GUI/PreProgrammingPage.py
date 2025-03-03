@@ -166,7 +166,7 @@ class PreProgrammingPage:
         print(f"🛠 Creating block for '{command_name}' from module {command_module}")  # Debugging print
 
         if command_name not in command_module:
-            print(f"🚨 Error: '{command_name}' not found in module. Available: {list(command_module.keys())}")
+            print(f"🚨 ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}")
             return None
 
         inputs = command_module[command_name].get("inputs", {})
@@ -182,8 +182,9 @@ class PreProgrammingPage:
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # 🔹 Store command name inside the block (IMPORTANT FIX)
-        block.command_name = command_name  
+        # ✅ Store both the command name and module reference in the block
+        block.command_name = command_name
+        block.command_module = command_module  # Store module reference
 
         label = tk.Label(
             content_frame, text=command_name, bg=color, fg="white", font=("Arial", 12, "bold"), anchor="w"
@@ -193,7 +194,7 @@ class PreProgrammingPage:
         input_vars = {}
 
         for label_text, var_name in inputs.items():
-            if not isinstance(var_name, str):  # Validate input field
+            if not isinstance(var_name, str):  
                 print(f"🚨 Error: Unexpected input key '{var_name}' in {command_name}. Skipping.")
                 continue
 
@@ -210,13 +211,7 @@ class PreProgrammingPage:
         block.grid_row = row
         block.grid_col = col
 
-        # 🛠 Restore drag & drop logic
-        block.bind("<Button-1>", lambda e, b=block: self.on_drag_start(e, b))
-        block.bind("<B1-Motion>", lambda e, b=block: self.on_drag_motion(e, b))
-        block.bind("<ButtonRelease-1>", lambda e, b=block: self.on_drop(e, b))
-
         return block
-
 
 
     def on_drag_start(self, event, block):
@@ -391,18 +386,21 @@ class PreProgrammingPage:
         def execute_commands():
             """Executes commands without blocking the UI."""
             for block in self.command_list:
-                # ✅ Use stored command_name instead of command_label
-                command_name = getattr(block, "command_name", None)  
-                command_module = getattr(block, "command_module", None)  
+                command_name = getattr(block, "command_name", None)
+                command_module = getattr(block, "command_module", None)
 
                 if not command_name:
-                    print(f"🚨 Error: Block at row {block.grid_row} has no command_name!")
+                    print(f"🚨 ERROR: Block at row {block.grid_row} has no command_name!")
                     continue
 
-                print(f"▶ Running Command: {command_name} from Module: {command_module}")  # Debugging print
+                if not command_module:
+                    print(f"🚨 ERROR: Block '{command_name}' has no module reference!")
+                    continue
 
-                if not command_module or command_name not in command_module:
-                    print(f"🚨 Error: '{command_name}' not found in module! Available: {list(command_module.keys()) if command_module else 'None'}")
+                print(f"▶ Running Command: {command_name} from Module: {command_module}")
+
+                if command_name not in command_module:
+                    print(f"🚨 ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}")
                     self.log_action(f"Error: Unknown command {command_name}")
                     continue
 
@@ -424,6 +422,7 @@ class PreProgrammingPage:
                 except Exception as e:
                     print(f"❌ Execution Failed for {command_name}: {e}")
                     self.log_action(f"Error running {command_name}: {e}")
+
 
                     
         # 🔹 Start execute_commands in a new thread so it doesn't freeze the UI

@@ -430,77 +430,74 @@ class PreProgrammingPage:
     import threading
 
     def run_program(self):
-        # Executes commands using send_command() in a background thread and logs it.
+        # Executes commands using send_command() in a background thread and logs it
         self.controller.show_page("ObservationPage")
         self.log_action("Program started...")
 
-        def execute_commands(self):
-            # Executes commands sequentially, waiting until each finishes. Speech runs in parallel
-            total_commands = len(self.command_list)
-            if total_commands == 0:
-                self.controller.pages["ObservationPage"].update_progress(0)
-                return
+        # Start execute_commands in a new thread
+        threading.Thread(target=self.execute_commands, daemon=True).start()
 
-            for index, block in enumerate(self.command_list):
-                command_name = getattr(block, "command_name", None)
-                command_module = getattr(block, "command_module", None)
+    def execute_commands(self):
+        # Executes commands sequentially, waiting until each finishes. Speech runs in parallel
+        total_commands = len(self.command_list)
+        if total_commands == 0:
+            self.controller.pages["ObservationPage"].update_progress(0)
+            return
 
-                if not command_name:
-                    print(f"ERROR: Block at row {block.grid_row} has no command_name!")
-                    continue
+        for index, block in enumerate(self.command_list):
+            command_name = getattr(block, "command_name", None)
+            command_module = getattr(block, "command_module", None)
 
-                if not command_module:
-                    print(f"ERROR: Block '{command_name}' has no module reference!")
-                    continue
+            if not command_name:
+                print(f"ERROR: Block at row {block.grid_row} has no command_name!")
+                continue
 
-                print(f"Running Command: {command_name} from Module: {command_module}")
+            if not command_module:
+                print(f"ERROR: Block '{command_name}' has no module reference!")
+                continue
 
-                if command_name not in command_module:
-                    print(f"ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}")
-                    self.log_action(f"Error: Unknown command {command_name}")
-                    continue
+            print(f"Running Command: {command_name} from Module: {command_module}")
 
-                command_info = command_module[command_name]
-                command_function = command_info.get("function")
+            if command_name not in command_module:
+                print(f"ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}")
+                self.log_action(f"Error: Unknown command {command_name}")
+                continue
 
-                inputs = {}
-                for var_name, var in block.input_vars.items():
-                    input_value = var.get().strip()
-                    inputs[var_name] = input_value
+            command_info = command_module[command_name]
+            command_function = command_info.get("function")
 
-                try:
-                    print(f"Executing: {command_name} with inputs {inputs}")
-                    self.log_action(f"Executing: {command_name} with {inputs}")
+            inputs = {}
+            for var_name, var in block.input_vars.items():
+                input_value = var.get().strip()
+                inputs[var_name] = input_value
 
-                    if command_name == "Speak Text":
-                        # Speech runs in parallel (does not block execution)
-                        threading.Thread(target=command_function, args=inputs.values(), daemon=True).start()
-                    else:
-                        # Other commands execute one after the other
-                        start_time = time.time()  # Start timing execution
+            try:
+                print(f"Executing: {command_name} with inputs {inputs}")
+                self.log_action(f"Executing: {command_name} with {inputs}")
 
-                        command_function(*inputs.values())  # Run the function
+                if command_name == "Speak Text":
+                    # Speech runs in parallel (does not block execution)
+                    threading.Thread(target=command_function, args=inputs.values(), daemon=True).start()
+                else:
+                    # Other commands execute one after the other
+                    start_time = time.time()  # ⏳ Start timing execution
 
-                        # Check for command completion dynamically
-                        execution_time = self.estimate_execution_time(command_name, inputs)
-                        print(f"Estimated Execution Time for {command_name}: {execution_time:.2f} seconds")
-                        time.sleep(execution_time)  # Wait for the command to finish
+                    command_function(*inputs.values())  # Run the function
 
-                except Exception as e:
-                    print(f"Execution Failed for {command_name}: {e}")
-                    self.log_action(f"Error running {command_name}: {e}")
+                    # Check for command completion dynamically
+                    execution_time = self.estimate_execution_time(command_name, inputs)
+                    print(f"⏳ Estimated Execution Time for {command_name}: {execution_time:.2f} seconds")
+                    time.sleep(execution_time)  # Wait for the command to finish
+
+            except Exception as e:
+                print(f"Execution Failed for {command_name}: {e}")
+                self.log_action(f"Error running {command_name}: {e}")
 
             # Update progress bar
             percent_complete = ((index + 1) / total_commands) * 100
             self.controller.pages["ObservationPage"].update_progress(percent_complete)
 
         self.controller.pages["ObservationPage"].update_progress(100)  # Complete
-
-
-        # Start execute_commands in a new thread so it doesn't freeze the UI
-        import threading
-
-        threading.Thread(target=self.execute_commands, daemon=True).start()
 
     def estimate_execution_time(self, command_name, inputs):
         # Estimates execution time dynamically based on command type and input values

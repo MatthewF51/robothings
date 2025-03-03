@@ -32,6 +32,11 @@ class PreProgrammingPage:
 
         # To handle row highlighting
         self.highlight_rect = None
+        
+        # Scrolling stuff
+        self.visible_rows = 8  # Number of visible rows at a time
+        self.scroll_position = 0  # Current scroll index
+
 
         self.module_colors = {}
 
@@ -90,38 +95,27 @@ class PreProgrammingPage:
         self.file_name_entry.pack(side="left", padx=10)
         self.file_name_entry.insert(0, "program")  # Default file name
 
-        # Box C: Programming area
+        # Box C: Programming area (Fixed Grid)
         programming_frame = tk.Frame(middle_frame, bg="white")
         programming_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 
-        # Scrollbar for the programming area
-        self.scrollbar = ttk.Scrollbar(programming_frame, orient="vertical")
-        self.scrollbar.pack(side="right", fill="y")
+        self.programming_area = tk.Frame(programming_frame, bg="lightgray")
+        self.programming_area.pack(fill="both", expand=True)
 
-        self.programming_area = tk.Canvas(
-            programming_frame,
-            bg="lightgray",
-            width=self.CELL_WIDTH,
-            height=self.GRID_ROWS * self.CELL_HEIGHT,
-            highlightthickness=0,
-            yscrollcommand=self.scrollbar.set,  # 🔹 Link canvas scrolling to scrollbar
-        )
-        self.programming_area.pack(side="left", fill="both", expand=True)
+        # Create visible grid slots
+        self.grid_slots = []
+        for i in range(self.visible_rows):
+            slot = tk.Frame(self.programming_area, bg="lightgray", height=self.CELL_HEIGHT)
+            slot.grid(row=i, column=0, sticky="ew", padx=5, pady=2)
+            self.grid_slots.append(slot)
 
-        # Configure scrollbar to scroll the canvas
-        self.scrollbar.config(command=self.programming_area.yview)
+        # Scroll buttons
+        scroll_controls = tk.Frame(programming_frame, bg="white")
+        scroll_controls.pack(fill="x", pady=5)
 
-        # Create the inner frame inside the canvas
-        self.canvas_content = tk.Frame(self.programming_area, bg="lightgray")
-        self.inner_window = self.programming_area.create_window(
-            (0, 0), window=self.canvas_content, anchor="nw"
-        )
+        tk.Button(scroll_controls, text="⬆ Scroll Up", command=self.scroll_up).pack(side="left", expand=True)
+        tk.Button(scroll_controls, text="⬇ Scroll Down", command=self.scroll_down).pack(side="right", expand=True)
 
-        # Bind scrolling
-        self.canvas_content.bind("<Configure>", lambda e: self.programming_area.config(scrollregion=self.programming_area.bbox("all")))
-
-        # Remove mouse wheel binding so it only works with the scrollbar
-        self.programming_area.unbind_all("<MouseWheel>")
 
 
         # Box D: Log Area
@@ -187,20 +181,17 @@ class PreProgrammingPage:
                 )
 
     def add_block_to_grid(self, command_label, command_module):
+        # Add a new block to the command list
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
-        for row in range(len(self.grid_cells)):
-            if not self.grid_cells[row][0]:  # Find an empty row
-                block = self.create_block(
-                    command_label, row, 0, command_module
-                )  # Pass correct module
-                self.grid_cells[row][0] = block
-                self.command_list.append(block)
-                return
+        # Create a new block
+        block = self.create_block(command_label, command_module)
+        self.command_list.append(block)
 
-        self.add_row()
-        self.add_block_to_grid(command_label, command_module)
+        self.refresh_visible_blocks()  # Refresh UI after adding
+
+
 
     def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()
@@ -650,26 +641,18 @@ class PreProgrammingPage:
         self.restore_state(last_state)
 
     def capture_state(self):
-        # Capture the current state, ensuring it is not a duplicate of the last recorded state
+        # Capture the current state of the programming area
         state = []
 
-        for row in range(len(self.grid_cells)):
-            block = self.grid_cells[row][0]
-            if block:
-                command_name = block.command_name
-                command_module_name = getattr(block, "command_module_name", "Unknown")
-                inputs = {
-                    var_name: var.get() for var_name, var in block.input_vars.items()
-                }
+        for i, block in enumerate(self.command_list):
+            command_name = block.command_name
+            command_module_name = getattr(block, "command_module_name", "Unknown")
+            inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
 
-                state.append(
-                    (command_name, command_module_name, inputs, row)
-                )  # Store row position
+            state.append((command_name, command_module_name, inputs, i))  # Store row index
 
-        if self.undo_list and self.undo_list[-1] == state:
-            return None  # Prevent redundant states
+        return state if not self.undo_list or self.undo_list[-1] != state else None
 
-        return state
 
     def capture_input_change(self):
         # Capture state when a user modifies an input field
@@ -679,7 +662,7 @@ class PreProgrammingPage:
     def restore_state(self, state):
         # Restore a previous state of the programming area
         self.clear_programming_area()
-
+        
         modules_commands = load_modules()  # Reload available modules
 
         for command_name, module_name, inputs, row in state:
@@ -689,23 +672,15 @@ class PreProgrammingPage:
 
             command_module = modules_commands[module_name]["commands"]
             if command_name not in command_module:
-                print(
-                    f"🚨 ERROR: Command '{command_name}' not found in '{module_name}'!"
-                )
+                print(f"🚨 ERROR: Command '{command_name}' not found in '{module_name}'!")
                 continue
 
             # Create block using stored data
             block = self.create_block_from_data(command_name, command_module, inputs)
-
-            # Place block in the correct row
-            self.grid_cells[row][0] = block
-            block.grid_row = row
-            block.grid_col = 0
-            block.place(x=0, y=row * self.CELL_HEIGHT)
-
             self.command_list.append(block)
 
-        self.move_blocks_up()
+        self.refresh_visible_blocks()
+
 
     def create_block_from_data(self, command_name, expected_inputs, input_values):
         # Get the module color or use a default
@@ -802,14 +777,36 @@ class PreProgrammingPage:
         if empty_rows < 2:
             self.add_row()
 
-    def on_mouse_wheel(self, event):
-        # Handles mouse wheel scrolling
-        self.programming_area.yview_scroll(-1 * (event.delta // 120), "units")
+    def scroll_up(self):
+        # Scroll the programming area up
+        if self.scroll_position > 0:
+            self.scroll_position -= 1
+            self.refresh_visible_blocks()
 
-    def update_scroll_region(self):
-        # Updates the canvas scroll region
-        self.programming_area.update_idletasks()
-        self.programming_area.config(scrollregion=self.programming_area.bbox("all"))
+    def scroll_down(self):
+        # Scroll the programming area down
+        if self.scroll_position + self.visible_rows < len(self.command_list):
+            self.scroll_position += 1
+            self.refresh_visible_blocks()
+
+    def refresh_visible_blocks(self):
+        # Refresh visible blocks based on scroll position
+        # Clear current display
+        for slot in self.grid_slots:
+            for widget in slot.winfo_children():
+                widget.destroy()
+
+        # Populate visible slots
+        for i in range(self.visible_rows):
+            row_index = self.scroll_position + i
+            if row_index < len(self.command_list):
+                block = self.command_list[row_index]
+
+                # Correct placement inside slot
+                block.grid_row = i  # Update visible position
+                block.place(in_=self.grid_slots[i], x=0, y=0, relwidth=1, relheight=1)
+
+
 
     def update_command_list(self):
         # Update the list of commands

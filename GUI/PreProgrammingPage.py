@@ -182,9 +182,8 @@ class PreProgrammingPage:
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # 🔹 Store the command name **and** its module inside the block
-        block.command_name = command_name
-        block.command_module = command_module  # Store reference to module
+        # 🔹 Store command name inside the block (IMPORTANT FIX)
+        block.command_name = command_name  
 
         label = tk.Label(
             content_frame, text=command_name, bg=color, fg="white", font=("Arial", 12, "bold"), anchor="w"
@@ -217,6 +216,7 @@ class PreProgrammingPage:
         block.bind("<ButtonRelease-1>", lambda e, b=block: self.on_drop(e, b))
 
         return block
+
 
 
     def on_drag_start(self, event, block):
@@ -391,8 +391,9 @@ class PreProgrammingPage:
         def execute_commands():
             """Executes commands without blocking the UI."""
             for block in self.command_list:
-                command_name = getattr(block, "command_name", None)  # Use stored command name
-                command_module = getattr(block, "command_module", None)  # Use stored module reference
+                # ✅ Use stored command_name instead of command_label
+                command_name = getattr(block, "command_name", None)  
+                command_module = getattr(block, "command_module", None)  
 
                 if not command_name:
                     print(f"🚨 Error: Block at row {block.grid_row} has no command_name!")
@@ -410,7 +411,6 @@ class PreProgrammingPage:
 
                 print(f"🛠 Function Retrieved: {command_function}")  # Debugging print
 
-                # Fetch input values
                 inputs = {}
                 for var_name, var in block.input_vars.items():
                     input_value = var.get().strip()
@@ -424,6 +424,7 @@ class PreProgrammingPage:
                 except Exception as e:
                     print(f"❌ Execution Failed for {command_name}: {e}")
                     self.log_action(f"Error running {command_name}: {e}")
+
                     
         # 🔹 Start execute_commands in a new thread so it doesn't freeze the UI
         import threading
@@ -526,21 +527,20 @@ class PreProgrammingPage:
         self.restore_state(last_state)
 
     def capture_state(self):
-        """Capture the current state, ensuring it is not a duplicate of the last recorded state."""
+        """Captures the current state of the programming area."""
         state = []
         for row in range(len(self.grid_cells)):
             block = self.grid_cells[row][0]
             if block:
-                command_name = block.command_label.cget("text")
+                command_name = getattr(block, "command_name", None)
+                if not command_name:
+                    print(f"🚨 Warning: Block at row {row} has no command_name. Skipping.")
+                    continue  # Skip blocks without a valid command name
+
                 inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
                 state.append((command_name, inputs, row))  # Store row position
 
-        if self.undo_list and self.undo_list[-1] == state:
-            return None  # Prevent redundant states
-
         return state
-
-
 
     
     def capture_input_change(self):

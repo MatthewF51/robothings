@@ -1,27 +1,24 @@
+import threading
 from utils import send_command
 
-def speak(text):
-    """Sends a text-to-speech command using send_command() to execute in the terminal."""
-    formatted_text = f"'{text}'"  # Ensure proper quoting
-
-    # Construct the correct rostopic pub command for Tiago's TTS system
-    tts_command = f"""rostopic pub -1 /tts/goal pal_interaction_msgs/TtsActionGoal "{{
-        goal: {{
-            rawtext: {{
-                text: {formatted_text},
-                lang_id: 'en_GB'
-            }}
-        }}
-    }}" """
-
-    send_command(tts_command)  # Execute the command
-
-# GUI Command Configuration
 COMMANDS = {
     "Speak Text": {
-        "function": speak,
-        "inputs": {"Text": "text"},
+        "function": lambda text: threading.Thread(
+            target=send_command,
+            args=(
+                f"""rostopic pub -1 /tts/goal pal_interaction_msgs/TtsActionGoal "{{
+                    goal: {{
+                        rawtext: {{
+                            text: '{text}',
+                            lang_id: 'en_GB'
+                        }}
+                    }}
+                }}" """,
+            ),
+            daemon=True
+        ).start(),
+        "inputs": {"Enter Text": "text"},  # Match movement input format
     }
 }
 
-colour = "#FFA500"  # Orange for UI
+colour = "#FFA500"  # Orange color for UI

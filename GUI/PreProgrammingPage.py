@@ -459,7 +459,9 @@ class PreProgrammingPage:
             print(f"Running Command: {command_name} from Module: {command_module}")
 
             if command_name not in command_module:
-                print(f"ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}")
+                print(
+                    f"ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}"
+                )
                 self.log_action(f"Error: Unknown command {command_name}")
                 continue
 
@@ -477,7 +479,9 @@ class PreProgrammingPage:
 
                 if command_name == "Speak Text":
                     # Speech runs in parallel (does not block execution)
-                    threading.Thread(target=command_function, args=inputs.values(), daemon=True).start()
+                    threading.Thread(
+                        target=command_function, args=inputs.values(), daemon=True
+                    ).start()
                 else:
                     # Other commands execute one after the other
                     start_time = time.time()  # ⏳ Start timing execution
@@ -486,7 +490,9 @@ class PreProgrammingPage:
 
                     # Check for command completion dynamically
                     execution_time = self.estimate_execution_time(command_name, inputs)
-                    print(f"⏳ Estimated Execution Time for {command_name}: {execution_time:.2f} seconds")
+                    print(
+                        f"Estimated Execution Time for {command_name}: {execution_time:.2f} seconds"
+                    )
                     time.sleep(execution_time)  # Wait for the command to finish
 
             except Exception as e:
@@ -504,18 +510,17 @@ class PreProgrammingPage:
         # Example: Movement commands → Use distance & speed for estimation
         if command_name in ["Move Forward", "Move Backward"]:
             distance = float(inputs.get("distance", 0))  # Get distance
-            speed = 0.5 
-            return ((distance / speed) + 1)
+            speed = 0.5
+            return (distance / speed) + 1
 
         # Example: Rotation commands → Use degrees & rotation speed
         elif command_name in ["Rotate Left", "Rotate Right"]:
             degrees = float(inputs.get("degrees", 0))
             rotation_speed = 1
-            return (((degrees * 3.14159265 / 180) / rotation_speed) + 1)
+            return ((degrees * 3.14159265 / 180) / rotation_speed) + 1
 
         # Default time if no estimation is available
-        return 3  # Assume a safe default execution time
-
+        return 10  # Assume a safe default execution time
 
     def save_program(self, file_name):
         os.makedirs("SavedFiles", exist_ok=True)  # Ensure the directory exists

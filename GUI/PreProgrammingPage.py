@@ -434,8 +434,10 @@ class PreProgrammingPage:
         self.controller.show_page("ObservationPage")
         self.log_action("Program started...")
 
-        def execute_commands():
-            # Executes commands without blocking the UI
+        import time
+
+        def execute_commands(self):
+            # Executes commands sequentially, waiting until each finishes. Speech runs in parallel
             total_commands = len(self.command_list)
             if total_commands == 0:
                 self.controller.pages["ObservationPage"].update_progress(0)
@@ -456,9 +458,7 @@ class PreProgrammingPage:
                 print(f"Running Command: {command_name} from Module: {command_module}")
 
                 if command_name not in command_module:
-                    print(
-                        f"ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}"
-                    )
+                    print(f"ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}")
                     self.log_action(f"Error: Unknown command {command_name}")
                     continue
 
@@ -473,23 +473,54 @@ class PreProgrammingPage:
                 try:
                     print(f"Executing: {command_name} with inputs {inputs}")
                     self.log_action(f"Executing: {command_name} with {inputs}")
-                    command_function(*inputs.values())  # Run the function with inputs
+
+                    if command_name == "Speak Text":
+                        # Speech runs in parallel (does not block execution)
+                        threading.Thread(target=command_function, args=inputs.values(), daemon=True).start()
+                    else:
+                        # Other commands execute one after the other
+                        start_time = time.time()  # Start timing execution
+
+                        command_function(*inputs.values())  # Run the function
+
+                        # Check for command completion dynamically
+                        execution_time = self.estimate_execution_time(command_name, inputs)
+                        print(f"Estimated Execution Time for {command_name}: {execution_time:.2f} seconds")
+                        time.sleep(execution_time)  # Wait for the command to finish
+
                 except Exception as e:
                     print(f"Execution Failed for {command_name}: {e}")
                     self.log_action(f"Error running {command_name}: {e}")
 
-                # Update progress bar
-                percent_complete = ((index + 1) / total_commands) * 100
-                self.controller.pages["ObservationPage"].update_progress(
-                    percent_complete
-                )
+            # Update progress bar
+            percent_complete = ((index + 1) / total_commands) * 100
+            self.controller.pages["ObservationPage"].update_progress(percent_complete)
 
-            self.controller.pages["ObservationPage"].update_progress(100)  # Complete
+        self.controller.pages["ObservationPage"].update_progress(100)  # Complete
 
-        # 🔹 Start execute_commands in a new thread so it doesn't freeze the UI
+
+        # Start execute_commands in a new thread so it doesn't freeze the UI
         import threading
 
         threading.Thread(target=execute_commands, daemon=True).start()
+
+    def estimate_execution_time(self, command_name, inputs):
+        # Estimates execution time dynamically based on command type and input values
+        # Example: Movement commands → Use distance & speed for estimation
+        if command_name in ["Move Forward", "Move Backward"]:
+            distance = float(inputs.get("distance", 0))  # Get distance
+            speed = 0.5 
+            return distance / speed
+
+        # Example: Rotation commands → Use degrees & rotation speed
+        elif command_name in ["Rotate Left", "Rotate Right"]:
+            degrees = float(inputs.get("degrees", 0))
+            rotation_speed = 1
+            return (degrees * 3.14159265 / 180) / rotation_speed
+
+        # Default time if no estimation is available
+        return 3  # Assume a safe default execution time
+
 
     def save_program(self, file_name):
         os.makedirs("SavedFiles", exist_ok=True)  # Ensure the directory exists

@@ -1,60 +1,40 @@
 from utils import send_command
 
 COMMANDS = {
-    "Move Arm Forward": {
-        "function": lambda distance: send_command(
-            "rosservice call /arm_teleop/move_rel", f"'x: {distance} y: 0.0 z: 0.0'"
+    "Move to Home Pose": {
+        "function": lambda: send_command(
+            "rosservice call /play_motion 'motion_name: \"home\" skip_planning: false'"
         ),
-        "inputs": {"Distance (m)": "distance"},
-    },
-    "Move Arm Backward": {
-        "function": lambda distance: send_command(
-            "rosservice call /arm_teleop/move_rel", f"'x: -{distance} y: 0.0 z: 0.0'"
-        ),
-        "inputs": {"Distance (m)": "distance"},
-    },
-    "Move Arm Left": {
-        "function": lambda distance: send_command(
-            "rosservice call /arm_teleop/move_rel", f"'x: 0.0 y: {distance} z: 0.0'"
-        ),
-        "inputs": {"Distance (m)": "distance"},
-    },
-    "Move Arm Right": {
-        "function": lambda distance: send_command(
-            "rosservice call /arm_teleop/move_rel", f"'x: 0.0 y: -{distance} z: 0.0'"
-        ),
-        "inputs": {"Distance (m)": "distance"},
-    },
-    "Move Arm Up": {
-        "function": lambda distance: send_command(
-            "rosservice call /arm_teleop/move_rel", f"'x: 0.0 y: 0.0 z: {distance}'"
-        ),
-        "inputs": {"Distance (m)": "distance"},
-    },
-    "Move Arm Down": {
-        "function": lambda distance: send_command(
-            "rosservice call /arm_teleop/move_rel", f"'x: 0.0 y: 0.0 z: -{distance}'"
-        ),
-        "inputs": {"Distance (m)": "distance"},
-    },
-    "Rotate Wrist Clockwise": {
-        "function": lambda angle: send_command(
-            "rosservice call /arm_teleop/rotate_wrist", f"'angle: {angle}'"
-        ),
-        "inputs": {"Angle (degrees)": "angle"},
-    },
-    "Rotate Wrist Counterclockwise": {
-        "function": lambda angle: send_command(
-            "rosservice call /arm_teleop/rotate_wrist", f"'angle: -{angle}'"
-        ),
-        "inputs": {"Angle (degrees)": "angle"},
-    },
-    "Grasp (Close Hand)": {
-        "function": lambda: send_command("rosservice call /gripper_controller/grasp"),
         "inputs": {},
     },
-    "Release (Open Hand)": {
-        "function": lambda: send_command("rosservice call /gripper_controller/release"),
+    "Move to Pick Pose": {
+        "function": lambda: send_command(
+            "rosservice call /play_motion 'motion_name: \"pick\" skip_planning: false'"
+        ),
+        "inputs": {},
+    },
+    "Move to Pregrasp Pose": {
+        "function": lambda: send_command(
+            "rosservice call /play_motion 'motion_name: \"pregrasp\" skip_planning: false'"
+        ),
+        "inputs": {},
+    },
+    "Move to Transport Pose": {
+        "function": lambda: send_command(
+            "rosservice call /play_motion 'motion_name: \"transport\" skip_planning: false'"
+        ),
+        "inputs": {},
+    },
+    "Move to Handover Pose": {
+        "function": lambda: send_command(
+            "rosservice call /play_motion 'motion_name: \"handover\" skip_planning: false'"
+        ),
+        "inputs": {},
+    },
+    "Wave": {
+        "function": lambda: send_command(
+            "rosservice call /play_motion 'motion_name: \"wave\" skip_planning: false'"
+        ),
         "inputs": {},
     },
 }

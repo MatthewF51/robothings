@@ -51,7 +51,6 @@ def load_modules():
     modules = {}
 
     for module_name in os.listdir(modules_path):
-        print(module_name)
         if (
             module_name.endswith(".py")
             and module_name != "__init__.py"

@@ -185,8 +185,12 @@ class PreProgrammingPage:
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
-        # Create a new block
-        block = self.create_block(command_label, command_module)
+        # Get the next available row and column (always col=0)
+        next_row = len(self.command_list)
+        col = 0  # Always column 0
+
+        # Create the block with correct parameters
+        block = self.create_block(command_label, next_row, col, command_module)
         self.command_list.append(block)
 
         self.refresh_visible_blocks()  # Refresh UI after adding
@@ -196,65 +200,29 @@ class PreProgrammingPage:
     def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()
 
-        print(
-            f"Creating block for '{command_name}' from module {command_module}"
-        )  # Debugging print
-
         if command_name not in command_module:
-            print(
-                f"ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}"
-            )
+            print(f"ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}")
             return None
 
         inputs = command_module[command_name].get("inputs", {})
-        print(f"Inputs for '{command_name}': {inputs}")  # Debugging print
-
         color = command_label.cget("bg")
-        block = tk.Frame(
-            self.programming_area,
-            bg=color,
-            relief="raised",
-            bd=2,
-            width=self.CELL_WIDTH,
-            height=self.CELL_HEIGHT,
-        )
-        block.place(x=col * self.CELL_WIDTH, y=row * self.CELL_HEIGHT)
+
+        block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2, width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
 
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # Store both the command name and module reference in the block
         block.command_name = command_name
-        block.command_module = command_module  # Store module reference
+        block.command_module = command_module
 
-        label = tk.Label(
-            content_frame,
-            text=command_name,
-            bg=color,
-            fg="white",
-            font=("Arial", 12, "bold"),
-            anchor="w",
-        )
+        label = tk.Label(content_frame, text=command_name, bg=color, fg="white", font=("Arial", 12, "bold"), anchor="w")
         label.pack(side="left", padx=5)
 
         input_vars = {}
-
         for label_text, var_name in inputs.items():
-            if not isinstance(var_name, str):
-                print(
-                    f"Error: Unexpected input key '{var_name}' in {command_name}. Skipping."
-                )
-                continue
-
-            print(f"Adding input field: {label_text} -> {var_name}")  # Debugging print
-            tk.Label(
-                content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
-            ).pack(side="left", padx=5)
-
+            tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
             input_var = tk.StringVar()
-            input_entry = tk.Entry(content_frame, textvariable=input_var, width=20)
-            input_entry.pack(side="left", padx=5)
-
+            tk.Entry(content_frame, textvariable=input_var, width=20).pack(side="left", padx=5)
             input_vars[var_name] = input_var
 
         block.input_vars = input_vars
@@ -262,6 +230,7 @@ class PreProgrammingPage:
         block.grid_col = col
 
         return block
+
 
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())

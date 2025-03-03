@@ -99,28 +99,28 @@ class ObservationPage:
         self.root.update_idletasks()  # Ensure smooth UI update
 
 
-def emergency_stop(self):
-    """Sends Ctrl+C to stop running commands without closing the UI."""
-    print("🚨 Emergency Stop Activated! Sending Ctrl+C to stop all commands...")
+    def emergency_stop(self):
+        """Sends Ctrl+C to stop running commands without closing the UI."""
+        print("🚨 Emergency Stop Activated! Sending Ctrl+C to stop all commands...")
 
-    # Find the process running `ros`
-    try:
-        result = subprocess.run(["pgrep", "-f", "ros"], capture_output=True, text=True)
-        pids = result.stdout.strip().split("\n")
+        # Find the process running `ros`
+        try:
+            result = subprocess.run(["pgrep", "-f", "ros"], capture_output=True, text=True)
+            pids = result.stdout.strip().split("\n")
 
-        if pids and pids[0]:  # If there are PIDs found
-            for pid in pids:
-                print(f"🛑 Stopping process {pid} (rostopic pub)")
-                os.kill(int(pid), signal.SIGINT)  # Send Ctrl+C (SIGINT)
-            
-            self.log_action("✅ All commands stopped successfully.")
-        else:
-            print("⚠ No active commands found to stop.")
-            self.log_action("⚠ No active commands were running.")
+            if pids and pids[0]:  # If there are PIDs found
+                for pid in pids:
+                    print(f"🛑 Stopping process {pid} (rostopic pub)")
+                    os.kill(int(pid), signal.SIGINT)  # Send Ctrl+C (SIGINT)
+                
+                self.log_action("✅ All commands stopped successfully.")
+            else:
+                print("⚠ No active commands found to stop.")
+                self.log_action("⚠ No active commands were running.")
 
-    except Exception as e:
-        print(f"❌ Failed to send Ctrl+C: {e}")
-        self.log_action(f"❌ Error stopping commands: {e}")
+        except Exception as e:
+            print(f"❌ Failed to send Ctrl+C: {e}")
+            self.log_action(f"❌ Error stopping commands: {e}")
 
 
 

@@ -434,71 +434,78 @@ class PreProgrammingPage:
 
     def save_program(self, file_name):
         os.makedirs("SavedFiles", exist_ok=True)  # Ensure the directory exists
+
         if not file_name:
             messagebox.showwarning("Save", "Please enter a valid file name.")
             return
 
         file_path = os.path.join("SavedFiles", f"{file_name}.txt")
+
         try:
             with open(file_path, "w") as file:
                 for block in self.command_list:
-                    command_name = block.command_label.cget("text")
+                    command_name = block.command_name
+                    module_name = getattr(block, "command_module_name", "Unknown")  # Store module name
                     inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
-                    input_line = f"{command_name};" + ";".join(f"{k}={v}" for k, v in inputs.items()) + "\n"
+                    
+                    input_line = f"{command_name};{module_name};" + ";".join(f"{k}={v}" for k, v in inputs.items()) + "\n"
                     file.write(input_line)
+
             messagebox.showinfo("Save", f"Program saved to {file_path}!")
         except Exception as e:
             messagebox.showerror("Save Error", f"Error saving program: {e}")
 
-
-
     def load_program(self, file_name):
         try:
-            # Clear the programming area before loading
-            self.clear_programming_area()
-            
+            self.clear_programming_area()  # Clear previous blocks
+
             file_path = os.path.join("SavedFiles", f"{file_name}.txt")
+
             with open(file_path, "r") as file:
                 for line in file:
                     line = line.strip()
                     if not line:
                         continue
-                    
-                    # Split command and input data
+
+                    # Read command_name, module_name, and input values
                     parts = line.split(";")
                     command_name = parts[0]
-                    inputs = {}
+                    module_name = parts[1]
+                    inputs = {kv.split("=")[0]: kv.split("=")[1] for kv in parts[2:]}
+
+                    # Find correct module
+                    modules_commands = load_modules()
+                    if module_name not in modules_commands:
+                        print(f"🚨 ERROR: Module '{module_name}' not found!")
+                        continue
+
+                    command_module = modules_commands[module_name]["commands"]
+                    if command_name not in command_module:
+                        print(f"🚨 ERROR: Command '{command_name}' not found in '{module_name}'!")
+                        continue
+
+                    # Create block with correct module and inputs
+                    block = self.create_block_from_data(command_name, command_module, inputs)
                     
-                    # Parse inputs
-                    for input_part in parts[1:]:
-                        key, value = input_part.split("=")
-                        inputs[key] = value
-                    
-                    # Validate the command exists
-                    if command_name not in COMMANDS:
-                        raise ValueError(f"Command '{command_name}' not found.")
-                    
-                    # Create the block using saved data
-                    command_data = COMMANDS[command_name]
-                    block = self.create_block_from_data(command_name, command_data["inputs"], inputs)
-                    
-                    # Find an empty row in the grid and place the block
-                    for row in range(len(self.grid_cells)):
-                        if not self.grid_cells[row][0]:  # Find the first empty row
+                    for row in range(len(self.grid_cells)):  # Find empty row
+                        if not self.grid_cells[row][0]:
                             block.grid_row = row
                             block.grid_col = 0
                             block.place(x=0, y=row * self.CELL_HEIGHT)
-                            self.grid_cells[row][0] = block  # Update grid_cells
+                            self.grid_cells[row][0] = block
                             break
-                    
-                    self.command_list.append(block)  # Add to command list
-                    self.move_blocks_up()
+
+                    self.command_list.append(block)
+
+                self.move_blocks_up()
+
             messagebox.showinfo("Load Success", f"Program '{file_name}.txt' loaded successfully.")
+
         except FileNotFoundError:
             messagebox.showerror("Load Error", f"File '{file_name}.txt' not found.")
         except Exception as e:
             messagebox.showerror("Load Error", f"Error loading program: {e}")
-            
+        
     def undo_last_action(self):
         if not self.undo_list:
             messagebox.showinfo("Undo", "Nothing to undo")
@@ -526,20 +533,23 @@ class PreProgrammingPage:
         self.restore_state(last_state)
 
     def capture_state(self):
-        """Captures the current state of the programming area."""
+        """Capture the current state, ensuring it is not a duplicate of the last recorded state."""
         state = []
+
         for row in range(len(self.grid_cells)):
             block = self.grid_cells[row][0]
             if block:
-                command_name = getattr(block, "command_name", None)
-                if not command_name:
-                    print(f"🚨 Warning: Block at row {row} has no command_name. Skipping.")
-                    continue  # Skip blocks without a valid command name
-
+                command_name = block.command_name
+                command_module_name = getattr(block, "command_module_name", "Unknown")
                 inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
-                state.append((command_name, inputs, row))  # Store row position
+                
+                state.append((command_name, command_module_name, inputs, row))  # Store row position
+
+        if self.undo_list and self.undo_list[-1] == state:
+            return None  # Prevent redundant states
 
         return state
+
 
     
     def capture_input_change(self):
@@ -552,14 +562,20 @@ class PreProgrammingPage:
         """Restore a previous state of the programming area."""
         self.clear_programming_area()
 
-        for command_name, inputs, row in state:
-            if command_name not in COMMANDS:
-                messagebox.showerror("Restore Error", f"Command '{command_name}' not found.")
+        modules_commands = load_modules()  # Reload available modules
+
+        for command_name, module_name, inputs, row in state:
+            if module_name not in modules_commands:
+                print(f"🚨 ERROR: Module '{module_name}' not found during restore!")
+                continue
+
+            command_module = modules_commands[module_name]["commands"]
+            if command_name not in command_module:
+                print(f"🚨 ERROR: Command '{command_name}' not found in '{module_name}'!")
                 continue
 
             # Create block using stored data
-            command_data = COMMANDS[command_name]
-            block = self.create_block_from_data(command_name, command_data["inputs"], inputs)
+            block = self.create_block_from_data(command_name, command_module, inputs)
 
             # Place block in the correct row
             self.grid_cells[row][0] = block
@@ -569,7 +585,8 @@ class PreProgrammingPage:
 
             self.command_list.append(block)
 
-        self.move_blocks_up()  # Ensure blocks are positioned correctly
+        self.move_blocks_up()
+
 
     def create_block_from_data(self, command_name, expected_inputs, input_values):
         # Get the module color or use a default

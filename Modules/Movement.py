@@ -2,7 +2,7 @@ import threading
 from utils import send_command
 
 # Constants
-FIXED_ROTATION_SPEED = 0.1  # rad/s
+FIXED_ROTATION_SPEED = 1  # rad/s
 COMPENSATION_TIME = 1  # Extra time to account for delay
 
 COMMANDS = {

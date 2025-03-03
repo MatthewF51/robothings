@@ -149,7 +149,7 @@ class PreProgrammingPage:
 
         for row in range(len(self.grid_cells)):
             if not self.grid_cells[row][0]:  # Find an empty row
-                block = self.create_block(command_label, row, 0, command_module)
+                block = self.create_block(command_label, row, 0, command_module)  # Pass correct module
                 self.grid_cells[row][0] = block
                 self.command_list.append(block)
                 return
@@ -159,7 +159,8 @@ class PreProgrammingPage:
 
 
 
-    def create_block(self, command_label, row, col, command_module):    
+
+    def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()
 
         print(f"🛠 Creating block for '{command_name}' from module {command_module}")  # Debugging print
@@ -181,8 +182,9 @@ class PreProgrammingPage:
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # 🛠 Store the command name inside the block for later retrieval
-        block.command_name = command_name  
+        # 🔹 Store the command name **and** its module inside the block
+        block.command_name = command_name
+        block.command_module = command_module  # Store reference to module
 
         label = tk.Label(
             content_frame, text=command_name, bg=color, fg="white", font=("Arial", 12, "bold"), anchor="w"
@@ -216,70 +218,6 @@ class PreProgrammingPage:
 
         return block
 
-
-    """
-    def create_block(self, command_label, row, col):
-        # Create a draggable block in the programming area
-        color = command_label.cget("bg")
-        command_name = command_label.cget("text")
-
-        # Create a block
-        block = tk.Frame(
-            self.programming_area,
-            bg=color,
-            relief="raised",
-            bd=2,
-            width=self.CELL_WIDTH,
-            height=self.CELL_HEIGHT,
-        )
-        block.place(x=col * self.CELL_WIDTH, y=row * self.CELL_HEIGHT)
-
-        # Create a container frame for the block's content
-        content_frame = tk.Frame(block, bg=color)
-        content_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
-        # Add command label
-        label = tk.Label(
-            content_frame,
-            text=command_name,
-            bg=color,
-            fg="white",
-            font=("Arial", 12, "bold"),
-            anchor="w",  # Align text to the left
-        )
-        label.pack(side="left", padx=5)
-        block.command_label = label  # Add reference to the block for easy access
-
-        # Add input fields dynamically based on the command's input requirements
-        inputs = COMMANDS[command_name]["inputs"]
-        input_vars = {}
-        for label_text, var_name in inputs.items():
-            tk.Label(
-                content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
-            ).pack(side="left", padx=5)
-            input_var = tk.StringVar()
-            
-            # Add an event listener to capture changes
-            input_entry = tk.Entry(content_frame, textvariable=input_var, width=8)
-            input_entry.pack(side="left", padx=5)
-            input_entry.bind("<KeyRelease>", lambda e: self.capture_input_change())
-            
-            input_vars[var_name] = input_var
-
-        # Store inputs in the block for later use
-        block.input_vars = input_vars
-
-        # Make the entire block draggable, including its child widgets
-        for widget in [block] + list(content_frame.winfo_children()):
-            widget.bind("<Button-1>", lambda e, b=block: self.on_drag_start(e, b))
-            widget.bind("<B1-Motion>", lambda e, b=block: self.on_drag_motion(e, b))
-            widget.bind("<ButtonRelease-1>", lambda e, b=block: self.on_drop(e, b))
-
-        # Set grid attributes
-        block.grid_row = row
-        block.grid_col = col
-        return block
-    """
 
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())
@@ -454,19 +392,20 @@ class PreProgrammingPage:
             """Executes commands without blocking the UI."""
             for block in self.command_list:
                 command_name = getattr(block, "command_name", None)  # Use stored command name
+                command_module = getattr(block, "command_module", None)  # Use stored module reference
 
                 if not command_name:
                     print(f"🚨 Error: Block at row {block.grid_row} has no command_name!")
                     continue
 
-                print(f"▶ Running Command: {command_name}")  # Debugging print
+                print(f"▶ Running Command: {command_name} from Module: {command_module}")  # Debugging print
 
-                if command_name not in COMMANDS:
-                    print(f"🚨 Error: '{command_name}' not found in COMMANDS! Available: {list(COMMANDS.keys())}")
+                if not command_module or command_name not in command_module:
+                    print(f"🚨 Error: '{command_name}' not found in module! Available: {list(command_module.keys()) if command_module else 'None'}")
                     self.log_action(f"Error: Unknown command {command_name}")
                     continue
 
-                command_info = COMMANDS[command_name]
+                command_info = command_module[command_name]
                 command_function = command_info.get("function")
 
                 print(f"🛠 Function Retrieved: {command_function}")  # Debugging print
@@ -485,7 +424,7 @@ class PreProgrammingPage:
                 except Exception as e:
                     print(f"❌ Execution Failed for {command_name}: {e}")
                     self.log_action(f"Error running {command_name}: {e}")
-
+                    
         # 🔹 Start execute_commands in a new thread so it doesn't freeze the UI
         import threading
         threading.Thread(target=execute_commands, daemon=True).start()

@@ -11,6 +11,7 @@ import os
 import time
 import signal
 from tkinter import messagebox
+import subprocess
 
 # ROS Topic for Tiago's Camera
 CAMERA_TOPIC = "/xtion/rgb/image_raw"
@@ -97,19 +98,30 @@ class ObservationPage:
         self.progress_label.config(text=f"Execution Progress: {int(percent)}%")
         self.root.update_idletasks()  # Ensure smooth UI update
 
-    def emergency_stop(self):
-        """🔴 Emergency Stop - Stops all robot movement and disables controllers using Ctrl-C."""
-        try:
-            rospy.logwarn("🚨 Emergency Stop Activated! Sending Ctrl-C to stop running processes.")
 
-            # Send Ctrl-C to stop all running processes
-            os.kill(os.getpid(), signal.SIGINT)  
+def emergency_stop(self):
+    """Sends Ctrl+C to stop running commands without closing the UI."""
+    print("🚨 Emergency Stop Activated! Sending Ctrl+C to stop all commands...")
 
-            messagebox.showinfo("Emergency Stop", "🚨 All robot functions stopped!")
+    # Find the process running `ros`
+    try:
+        result = subprocess.run(["pgrep", "-f", "ros"], capture_output=True, text=True)
+        pids = result.stdout.strip().split("\n")
 
-        except Exception as e:
-            rospy.logerr(f"Emergency Stop Failed: {e}")
-            messagebox.showerror("Emergency Stop Error", f"Failed to stop robot: {e}")
+        if pids and pids[0]:  # If there are PIDs found
+            for pid in pids:
+                print(f"🛑 Stopping process {pid} (rostopic pub)")
+                os.kill(int(pid), signal.SIGINT)  # Send Ctrl+C (SIGINT)
+            
+            self.log_action("✅ All commands stopped successfully.")
+        else:
+            print("⚠ No active commands found to stop.")
+            self.log_action("⚠ No active commands were running.")
+
+    except Exception as e:
+        print(f"❌ Failed to send Ctrl+C: {e}")
+        self.log_action(f"❌ Error stopping commands: {e}")
+
 
 
     def stop_video_stream(self):

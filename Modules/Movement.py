@@ -12,9 +12,9 @@ COMMANDS = {
             args=(
                 f"rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist "
                 f"'{{linear: {{x: 0.5, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: 0.0}}}}' -r 10",
-                (float(distance) / 0.5) + COMPENSATION_TIME  # Compensate for delay
+                (float(distance) / 0.5) + COMPENSATION_TIME,  # Compensate for delay
             ),
-            daemon=True
+            daemon=True,
         ).start(),
         "inputs": {"Distance": "distance"},
     },
@@ -24,9 +24,9 @@ COMMANDS = {
             args=(
                 f"rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist "
                 f"'{{linear: {{x: -0.5, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: 0.0}}}}' -r 10",
-                (float(distance) / 0.5) + COMPENSATION_TIME
+                (float(distance) / 0.5) + COMPENSATION_TIME,
             ),
-            daemon=True
+            daemon=True,
         ).start(),
         "inputs": {"Distance": "distance"},
     },
@@ -36,9 +36,10 @@ COMMANDS = {
             args=(
                 f"rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist "
                 f"'{{linear: {{x: 0.0, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: {FIXED_ROTATION_SPEED}}}}}' -r 10",
-                ((float(degrees) * 3.14159265 / 180) / FIXED_ROTATION_SPEED) + COMPENSATION_TIME
+                ((float(degrees) * 3.14159265 / 180) / FIXED_ROTATION_SPEED)
+                + COMPENSATION_TIME,
             ),
-            daemon=True
+            daemon=True,
         ).start(),
         "inputs": {"Degrees": "degrees"},
     },
@@ -48,9 +49,10 @@ COMMANDS = {
             args=(
                 f"rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist "
                 f"'{{linear: {{x: 0.0, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: {-FIXED_ROTATION_SPEED}}}}}' -r 10",
-                ((float(degrees) * 3.14159265 / 180) / FIXED_ROTATION_SPEED) + COMPENSATION_TIME
+                ((float(degrees) * 3.14159265 / 180) / FIXED_ROTATION_SPEED)
+                + COMPENSATION_TIME,
             ),
-            daemon=True
+            daemon=True,
         ).start(),
         "inputs": {"Degrees": "degrees"},
     },
@@ -60,7 +62,7 @@ COMMANDS = {
             "'{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'"
         ),
         "inputs": {},
-    }
+    },
 }
 
 colour = "#FF5733"  # Orange color for UI

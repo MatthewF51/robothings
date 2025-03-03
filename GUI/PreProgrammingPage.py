@@ -6,6 +6,7 @@ from Modules.Movement import COMMANDS
 import os
 import time
 
+
 class PreProgrammingPage:
     # Programming grid setup
     GRID_ROWS = 10
@@ -22,27 +23,33 @@ class PreProgrammingPage:
         self.drag_data = {"widget": None, "row": None, "col": None}
 
         # Grid tracking
-        self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
-        self.command_list = []  
-        self.undo_list = []  
-        self.redo_list = []  
+        self.grid_cells = [
+            [None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)
+        ]
+        self.command_list = []
+        self.undo_list = []
+        self.redo_list = []
 
         # To handle row highlighting
         self.highlight_rect = None
-        
+
         self.module_colors = {}
-        
+
         self.setup_ui()
 
     def setup_ui(self):
         self.frame.rowconfigure([0, 1], weight=1)
         self.frame.columnconfigure(0, weight=1)  # Commands section
-        self.frame.columnconfigure(1, weight=4)  # Programming area (reduced width)
+        self.frame.columnconfigure(1, weight=4)  # Programming area
         self.frame.columnconfigure(2, weight=2)  # Log area
 
         # Box A: Commands list
-        self.command_section = tk.LabelFrame(self.frame, text="Commands", bg="white", font=("Arial", 10, "bold"))
-        self.command_section.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=5, pady=5)
+        self.command_section = tk.LabelFrame(
+            self.frame, text="Commands", bg="white", font=("Arial", 10, "bold")
+        )
+        self.command_section.grid(
+            row=0, column=0, rowspan=2, sticky="nsew", padx=5, pady=5
+        )
         self.populate_command_section(self.command_section)
 
         # Middle frame (Programming area)
@@ -65,11 +72,20 @@ class PreProgrammingPage:
             "Run": "#32CD32",
         }
         for btn_text, btn_color in button_colors.items():
-            tk.Button(box_b, text=btn_text, bg=btn_color, fg="white", width=10, font=("Arial", 10, "bold"),
-                      command=lambda t=btn_text: self.handle_button_click(t)).pack(side="left", padx=10, pady=5)
+            tk.Button(
+                box_b,
+                text=btn_text,
+                bg=btn_color,
+                fg="white",
+                width=10,
+                font=("Arial", 10, "bold"),
+                command=lambda t=btn_text: self.handle_button_click(t),
+            ).pack(side="left", padx=10, pady=5)
 
         # File name input
-        tk.Label(box_b, text="File Name:", bg="white", font=("Arial", 10)).pack(side="left", padx=5)
+        tk.Label(box_b, text="File Name:", bg="white", font=("Arial", 10)).pack(
+            side="left", padx=5
+        )
         self.file_name_entry = tk.Entry(box_b, width=20, font=("Arial", 10))
         self.file_name_entry.pack(side="left", padx=10)
         self.file_name_entry.insert(0, "program")  # Default file name
@@ -81,35 +97,45 @@ class PreProgrammingPage:
         self.scrollbar = ttk.Scrollbar(programming_frame, orient="vertical")
         self.scrollbar.pack(side="right", fill="y")
 
-        self.programming_area = tk.Canvas(programming_frame, bg="lightgray",
-                                          width=self.CELL_WIDTH, height=self.GRID_ROWS * self.CELL_HEIGHT,
-                                          highlightthickness=0, yscrollcommand=self.scrollbar.set)
+        self.programming_area = tk.Canvas(
+            programming_frame,
+            bg="lightgray",
+            width=self.CELL_WIDTH,
+            height=self.GRID_ROWS * self.CELL_HEIGHT,
+            highlightthickness=0,
+            yscrollcommand=self.scrollbar.set,
+        )
         self.programming_area.pack(side="left", fill="both", expand=True)
         self.scrollbar.config(command=self.programming_area.yview)
 
         self.canvas_content = tk.Frame(self.programming_area, bg="lightgray")
-        self.programming_area.create_window((0, 0), window=self.canvas_content, anchor="nw")
+        self.programming_area.create_window(
+            (0, 0), window=self.canvas_content, anchor="nw"
+        )
 
         self.programming_area.bind("<MouseWheel>", self.on_mouse_wheel)
         self.update_scroll_region()
 
-        # **Box D: Log Area**
-        self.log_section = tk.LabelFrame(self.frame, text="Action Log", bg="white", font=("Arial", 10, "bold"))
+        # Box D: Log Area
+        self.log_section = tk.LabelFrame(
+            self.frame, text="Action Log", bg="white", font=("Arial", 10, "bold")
+        )
         self.log_section.grid(row=0, column=2, rowspan=2, sticky="nsew", padx=5, pady=5)
 
-        self.log_text = tk.Text(self.log_section, wrap="word", height=20, state="disabled", bg="lightgray")
+        self.log_text = tk.Text(
+            self.log_section, wrap="word", height=20, state="disabled", bg="lightgray"
+        )
         self.log_text.pack(fill="both", expand=True, padx=5, pady=5)
         self.log_scroll = ttk.Scrollbar(self.log_section, command=self.log_text.yview)
         self.log_scroll.pack(side="right", fill="y")
         self.log_text.config(yscrollcommand=self.log_scroll.set)
 
     def log_action(self, message):
-        """Appends a message to the log section."""
+        # Appends a message to the log section
         self.log_text.config(state="normal")
         self.log_text.insert("end", f"{message}\n")
         self.log_text.config(state="disabled")
-        self.log_text.yview("end")  # Auto-scroll to the latest log
-
+        self.log_text.yview("end")
 
     def populate_command_section(self, command_frame):
         modules_commands = load_modules()  # Load all available modules
@@ -118,13 +144,19 @@ class PreProgrammingPage:
             commands = module_data["commands"]
             color = module_data["color"]
 
-            print(f"📦 Loading Module: {module_name}, Available Commands: {list(commands.keys())}")  # Debugging print
+            print(
+                f"Loading Module: {module_name}, Available Commands: {list(commands.keys())}"
+            )  # Debugging print
 
-            module_label = tk.Label(command_frame, text=module_name, font=("Arial", 10, "bold"))
+            module_label = tk.Label(
+                command_frame, text=module_name, font=("Arial", 10, "bold")
+            )
             module_label.pack(pady=5)
 
             for command_name in commands.keys():
-                print(f"🔹 Adding command: '{command_name}' from Module: {module_name}")  # Debugging print
+                print(
+                    f"Adding command: '{command_name}' from Module: {module_name}"
+                )  # Debugging print
 
                 command_label = tk.Label(
                     command_frame,
@@ -139,9 +171,12 @@ class PreProgrammingPage:
                 command_label.pack(pady=2, padx=5, fill="x")
 
                 # Ensure correct module is passed when clicking the command
-                command_label.bind("<Button-1>", lambda e, label=command_label, mod=commands: self.add_block_to_grid(label, mod))
-
-
+                command_label.bind(
+                    "<Button-1>",
+                    lambda e, label=command_label, mod=commands: self.add_block_to_grid(
+                        label, mod
+                    ),
+                )
 
     def add_block_to_grid(self, command_label, command_module):
         self.undo_list.append(self.capture_state())
@@ -149,7 +184,9 @@ class PreProgrammingPage:
 
         for row in range(len(self.grid_cells)):
             if not self.grid_cells[row][0]:  # Find an empty row
-                block = self.create_block(command_label, row, 0, command_module)  # Pass correct module
+                block = self.create_block(
+                    command_label, row, 0, command_module
+                )  # Pass correct module
                 self.grid_cells[row][0] = block
                 self.command_list.append(block)
                 return
@@ -157,49 +194,63 @@ class PreProgrammingPage:
         self.add_row()
         self.add_block_to_grid(command_label, command_module)
 
-
-
-
     def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()
 
-        print(f"🛠 Creating block for '{command_name}' from module {command_module}")  # Debugging print
+        print(
+            f"Creating block for '{command_name}' from module {command_module}"
+        )  # Debugging print
 
         if command_name not in command_module:
-            print(f"🚨 ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}")
+            print(
+                f"ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}"
+            )
             return None
 
         inputs = command_module[command_name].get("inputs", {})
-        print(f"🎤 Inputs for '{command_name}': {inputs}")  # Debugging print
+        print(f"Inputs for '{command_name}': {inputs}")  # Debugging print
 
         color = command_label.cget("bg")
         block = tk.Frame(
-            self.programming_area, bg=color, relief="raised", bd=2,
-            width=self.CELL_WIDTH, height=self.CELL_HEIGHT
+            self.programming_area,
+            bg=color,
+            relief="raised",
+            bd=2,
+            width=self.CELL_WIDTH,
+            height=self.CELL_HEIGHT,
         )
         block.place(x=col * self.CELL_WIDTH, y=row * self.CELL_HEIGHT)
 
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # ✅ Store both the command name and module reference in the block
+        # Store both the command name and module reference in the block
         block.command_name = command_name
         block.command_module = command_module  # Store module reference
 
         label = tk.Label(
-            content_frame, text=command_name, bg=color, fg="white", font=("Arial", 12, "bold"), anchor="w"
+            content_frame,
+            text=command_name,
+            bg=color,
+            fg="white",
+            font=("Arial", 12, "bold"),
+            anchor="w",
         )
         label.pack(side="left", padx=5)
 
         input_vars = {}
 
         for label_text, var_name in inputs.items():
-            if not isinstance(var_name, str):  
-                print(f"🚨 Error: Unexpected input key '{var_name}' in {command_name}. Skipping.")
+            if not isinstance(var_name, str):
+                print(
+                    f"Error: Unexpected input key '{var_name}' in {command_name}. Skipping."
+                )
                 continue
 
-            print(f"🎤 Adding input field: {label_text} -> {var_name}")  # Debugging print
-            tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
+            print(f"Adding input field: {label_text} -> {var_name}")  # Debugging print
+            tk.Label(
+                content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
+            ).pack(side="left", padx=5)
 
             input_var = tk.StringVar()
             input_entry = tk.Entry(content_frame, textvariable=input_var, width=20)
@@ -213,11 +264,10 @@ class PreProgrammingPage:
 
         return block
 
-
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
-        
+
         # Start dragging a block
         self.drag_data["widget"] = block
         self.drag_data["row"] = block.grid_row
@@ -280,7 +330,7 @@ class PreProgrammingPage:
             )
 
     def on_drop(self, event, block):
-        """Capture state only if a block was actually moved."""
+        # Capture state only if a block was actually moved
         if block and self.highlight_rect:
             coords = self.programming_area.coords(self.highlight_rect)
             target_row = int(coords[1] // self.CELL_HEIGHT)
@@ -293,11 +343,13 @@ class PreProgrammingPage:
             block.grid_col = 0
             self.grid_cells[target_row][0] = block
             block.place(x=0, y=target_row * self.CELL_HEIGHT)
-            
+
             # Capture only if the position has changed
             if block.grid_row != target_row:
                 new_state = self.capture_state()
-                if new_state and (not self.undo_list or self.undo_list[-1] != new_state):
+                if new_state and (
+                    not self.undo_list or self.undo_list[-1] != new_state
+                ):
                     self.undo_list.append(new_state)
                     self.redo_list.clear()
 
@@ -306,7 +358,6 @@ class PreProgrammingPage:
 
         self.drag_data = {"widget": None, "row": None, "col": None}
         self.clear_highlight()
-
 
     def move_blocks_down(self, start_row):
         # Move all blocks from start_row down by one row
@@ -351,7 +402,7 @@ class PreProgrammingPage:
             self.highlight_rect = None
 
     def handle_button_click(self, button_text):
-        """Handles button clicks and logs actions."""
+        # Handles button clicks and logs actions
         self.log_action(f"Button clicked: {button_text}")
         if button_text == "Run":
             self.run_program()
@@ -375,62 +426,70 @@ class PreProgrammingPage:
             self.undo_last_action()
         elif button_text == "Redo":
             self.redo_last_action()
-            
+
     import threading
 
     def run_program(self):
-        """Executes commands using send_command() in a background thread and logs it."""
+        # Executes commands using send_command() in a background thread and logs it.
         self.controller.show_page("ObservationPage")
         self.log_action("Program started...")
 
         def execute_commands():
-            """Executes commands without blocking the UI."""
-            for block in self.command_list:
+            # Executes commands without blocking the UI
+            total_commands = len(self.command_list)
+            if total_commands == 0:
+                self.controller.pages["ObservationPage"].update_progress(0)
+                return
+
+            for index, block in enumerate(self.command_list):
                 command_name = getattr(block, "command_name", None)
                 command_module = getattr(block, "command_module", None)
 
                 if not command_name:
-                    print(f"🚨 ERROR: Block at row {block.grid_row} has no command_name!")
+                    print(f"ERROR: Block at row {block.grid_row} has no command_name!")
                     continue
 
                 if not command_module:
-                    print(f"🚨 ERROR: Block '{command_name}' has no module reference!")
+                    print(f"ERROR: Block '{command_name}' has no module reference!")
                     continue
 
-                print(f"▶ Running Command: {command_name} from Module: {command_module}")
+                print(f"Running Command: {command_name} from Module: {command_module}")
 
                 if command_name not in command_module:
-                    print(f"🚨 ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}")
+                    print(
+                        f"ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}"
+                    )
                     self.log_action(f"Error: Unknown command {command_name}")
                     continue
 
                 command_info = command_module[command_name]
                 command_function = command_info.get("function")
 
-                print(f"🛠 Function Retrieved: {command_function}")  # Debugging print
-
                 inputs = {}
                 for var_name, var in block.input_vars.items():
                     input_value = var.get().strip()
-                    print(f"🔹 Input for {command_name}: {var_name} = '{input_value}'")  # Debugging print
                     inputs[var_name] = input_value
 
                 try:
-                    print(f"🚀 Executing: {command_name} with inputs {inputs}")  # Debugging print
+                    print(f"Executing: {command_name} with inputs {inputs}")
                     self.log_action(f"Executing: {command_name} with {inputs}")
                     command_function(*inputs.values())  # Run the function with inputs
                 except Exception as e:
-                    print(f"❌ Execution Failed for {command_name}: {e}")
+                    print(f"Execution Failed for {command_name}: {e}")
                     self.log_action(f"Error running {command_name}: {e}")
 
+                # Update progress bar
+                percent_complete = ((index + 1) / total_commands) * 100
+                self.controller.pages["ObservationPage"].update_progress(
+                    percent_complete
+                )
 
-                    
+            self.controller.pages["ObservationPage"].update_progress(100)  # Complete
+
         # 🔹 Start execute_commands in a new thread so it doesn't freeze the UI
         import threading
+
         threading.Thread(target=execute_commands, daemon=True).start()
-
-
-
 
     def save_program(self, file_name):
         os.makedirs("SavedFiles", exist_ok=True)  # Ensure the directory exists
@@ -445,10 +504,19 @@ class PreProgrammingPage:
             with open(file_path, "w") as file:
                 for block in self.command_list:
                     command_name = block.command_name
-                    module_name = getattr(block, "command_module_name", "Unknown")  # Store module name
-                    inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
-                    
-                    input_line = f"{command_name};{module_name};" + ";".join(f"{k}={v}" for k, v in inputs.items()) + "\n"
+                    module_name = getattr(
+                        block, "command_module_name", "Unknown"
+                    )  # Store module name
+                    inputs = {
+                        var_name: var.get()
+                        for var_name, var in block.input_vars.items()
+                    }
+
+                    input_line = (
+                        f"{command_name};{module_name};"
+                        + ";".join(f"{k}={v}" for k, v in inputs.items())
+                        + "\n"
+                    )
                     file.write(input_line)
 
             messagebox.showinfo("Save", f"Program saved to {file_path}!")
@@ -476,17 +544,21 @@ class PreProgrammingPage:
                     # Find correct module
                     modules_commands = load_modules()
                     if module_name not in modules_commands:
-                        print(f"🚨 ERROR: Module '{module_name}' not found!")
+                        print(f"ERROR: Module '{module_name}' not found!")
                         continue
 
                     command_module = modules_commands[module_name]["commands"]
                     if command_name not in command_module:
-                        print(f"🚨 ERROR: Command '{command_name}' not found in '{module_name}'!")
+                        print(
+                            f"ERROR: Command '{command_name}' not found in '{module_name}'!"
+                        )
                         continue
 
                     # Create block with correct module and inputs
-                    block = self.create_block_from_data(command_name, command_module, inputs)
-                    
+                    block = self.create_block_from_data(
+                        command_name, command_module, inputs
+                    )
+
                     for row in range(len(self.grid_cells)):  # Find empty row
                         if not self.grid_cells[row][0]:
                             block.grid_row = row
@@ -499,13 +571,15 @@ class PreProgrammingPage:
 
                 self.move_blocks_up()
 
-            messagebox.showinfo("Load Success", f"Program '{file_name}.txt' loaded successfully.")
+            messagebox.showinfo(
+                "Load Success", f"Program '{file_name}.txt' loaded successfully."
+            )
 
         except FileNotFoundError:
             messagebox.showerror("Load Error", f"File '{file_name}.txt' not found.")
         except Exception as e:
             messagebox.showerror("Load Error", f"Error loading program: {e}")
-        
+
     def undo_last_action(self):
         if not self.undo_list:
             messagebox.showinfo("Undo", "Nothing to undo")
@@ -513,7 +587,9 @@ class PreProgrammingPage:
 
         # Capture current state before undoing, ensuring it's not a duplicate
         current_state = self.capture_state()
-        if current_state and (not self.redo_list or self.redo_list[-1] != current_state):
+        if current_state and (
+            not self.redo_list or self.redo_list[-1] != current_state
+        ):
             self.redo_list.append(current_state)
 
         last_state = self.undo_list.pop()
@@ -526,14 +602,16 @@ class PreProgrammingPage:
 
         # Capture current state before redoing, ensuring it's not a duplicate
         current_state = self.capture_state()
-        if current_state and (not self.undo_list or self.undo_list[-1] != current_state):
+        if current_state and (
+            not self.undo_list or self.undo_list[-1] != current_state
+        ):
             self.undo_list.append(current_state)
 
         last_state = self.redo_list.pop()
         self.restore_state(last_state)
 
     def capture_state(self):
-        """Capture the current state, ensuring it is not a duplicate of the last recorded state."""
+        # Capture the current state, ensuring it is not a duplicate of the last recorded state
         state = []
 
         for row in range(len(self.grid_cells)):
@@ -541,25 +619,26 @@ class PreProgrammingPage:
             if block:
                 command_name = block.command_name
                 command_module_name = getattr(block, "command_module_name", "Unknown")
-                inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
-                
-                state.append((command_name, command_module_name, inputs, row))  # Store row position
+                inputs = {
+                    var_name: var.get() for var_name, var in block.input_vars.items()
+                }
+
+                state.append(
+                    (command_name, command_module_name, inputs, row)
+                )  # Store row position
 
         if self.undo_list and self.undo_list[-1] == state:
             return None  # Prevent redundant states
 
         return state
 
-
-    
     def capture_input_change(self):
-        """Capture state when a user modifies an input field."""
+        # Capture state when a user modifies an input field
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
-    
     def restore_state(self, state):
-        """Restore a previous state of the programming area."""
+        # Restore a previous state of the programming area
         self.clear_programming_area()
 
         modules_commands = load_modules()  # Reload available modules
@@ -571,7 +650,9 @@ class PreProgrammingPage:
 
             command_module = modules_commands[module_name]["commands"]
             if command_name not in command_module:
-                print(f"🚨 ERROR: Command '{command_name}' not found in '{module_name}'!")
+                print(
+                    f"🚨 ERROR: Command '{command_name}' not found in '{module_name}'!"
+                )
                 continue
 
             # Create block using stored data
@@ -586,7 +667,6 @@ class PreProgrammingPage:
             self.command_list.append(block)
 
         self.move_blocks_up()
-
 
     def create_block_from_data(self, command_name, expected_inputs, input_values):
         # Get the module color or use a default
@@ -627,7 +707,9 @@ class PreProgrammingPage:
             tk.Label(
                 content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
             ).pack(side="left", padx=5)
-            input_var = tk.StringVar(value=input_values.get(var_name, ""))  # Set saved value
+            input_var = tk.StringVar(
+                value=input_values.get(var_name, "")
+            )  # Set saved value
             tk.Entry(content_frame, textvariable=input_var, width=8).pack(
                 side="left", padx=5
             )
@@ -641,7 +723,6 @@ class PreProgrammingPage:
         block.grid_col = col
 
         return block
-
 
     def create_command_label(self, command_name):
         # Helper to create a dummy label for loading commands.
@@ -683,15 +764,19 @@ class PreProgrammingPage:
             self.add_row()
 
     def on_mouse_wheel(self, event):
-        """Handles mouse wheel scrolling."""
+        # Handles mouse wheel scrolling
         self.programming_area.yview_scroll(-1 * (event.delta // 120), "units")
 
     def update_scroll_region(self):
-        """Updates the canvas scroll region."""
+        # Updates the canvas scroll region
         self.programming_area.update_idletasks()
         self.programming_area.config(scrollregion=self.programming_area.bbox("all"))
 
     def update_command_list(self):
         # Update the list of commands
-        self.command_list = [self.grid_cells[row][0] for row in range(len(self.grid_cells)) if self.grid_cells[row][0]];
+        self.command_list = [
+            self.grid_cells[row][0]
+            for row in range(len(self.grid_cells))
+            if self.grid_cells[row][0]
+        ]
         print(self.command_list)

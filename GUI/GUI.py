@@ -9,7 +9,9 @@ class GUIController:
         # Initialize the GUI controller
         self.root = tk.Tk()
         self.root.title("CtlrR")
-        self.root.geometry(f"{self.root.winfo_screenwidth()}x{self.root.winfo_screenheight()}")
+        self.root.geometry(
+            f"{self.root.winfo_screenwidth()}x{self.root.winfo_screenheight()}"
+        )
 
         # Create a container frame for all pages
         self.container = tk.Frame(self.root)
@@ -35,14 +37,13 @@ class GUIController:
         # Show the start screen by default
         self.show_page("StartScreen")
 
-
     def show_page(self, page_name):
         # Bring the specified page to the front
         if page_name in self.pages:
             self.pages[page_name].frame.tkraise()
 
     def run(self):
-        """Run the GUI application."""
+        # Run the GUI application
         self.root.mainloop()
 
 

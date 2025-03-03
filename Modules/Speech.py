@@ -15,7 +15,7 @@ COMMANDS = {
                     }}
                 }}" """,
             ),
-            daemon=True
+            daemon=True,
         ).start(),
         "inputs": {"Enter Text": "text"},  # Match movement input format
     }

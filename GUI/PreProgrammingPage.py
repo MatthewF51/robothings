@@ -434,8 +434,6 @@ class PreProgrammingPage:
         self.controller.show_page("ObservationPage")
         self.log_action("Program started...")
 
-        import time
-
         def execute_commands(self):
             # Executes commands sequentially, waiting until each finishes. Speech runs in parallel
             total_commands = len(self.command_list)
@@ -502,7 +500,7 @@ class PreProgrammingPage:
         # Start execute_commands in a new thread so it doesn't freeze the UI
         import threading
 
-        threading.Thread(target=execute_commands, daemon=True).start()
+        threading.Thread(target=self.execute_commands, daemon=True).start()
 
     def estimate_execution_time(self, command_name, inputs):
         # Estimates execution time dynamically based on command type and input values

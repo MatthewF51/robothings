@@ -112,18 +112,20 @@ class PreProgrammingPage:
 
 
     def populate_command_section(self, command_frame):
-        modules_commands = load_modules()
+        modules_commands = load_modules()  # Ensure this loads all modules correctly
+
         for module_name, module_data in modules_commands.items():
             commands = module_data["commands"]
             color = module_data["color"]
-            self.module_colors[module_name] = color
-            module_label = tk.Label(command_frame, text=module_name, font=("Arial", 10, "bold"))
-            module_label.pack(pady=5)
+
+            print(f"📦 Loading Module: {module_name}, Available Commands: {list(commands.keys())}")  # Debugging print
 
             for command_name in commands.keys():
+                print(f"🔹 Adding command: '{command_name}' from Module: {module_name}")  # Debugging print
+
                 command_label = tk.Label(
                     command_frame,
-                    text=command_name,
+                    text=command_name.strip(),  # Ensure no extra spaces
                     bg=color,
                     fg="white",
                     font=("Arial", 10),
@@ -132,24 +134,75 @@ class PreProgrammingPage:
                     pady=2,
                 )
                 command_label.pack(pady=2, padx=5, fill="x")
-                command_label.bind("<Button-1>", lambda e, label=command_label: self.add_block_to_grid(label))
 
-    def add_block_to_grid(self, command_label):
+                # Ensure the correct COMMANDS dictionary is used
+                command_label.bind("<Button-1>", lambda e, label=command_label, mod=commands: self.add_block_to_grid(label, mod))
+
+
+    def add_block_to_grid(self, command_label, command_module):
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
+
         for row in range(len(self.grid_cells)):
-            if not self.grid_cells[row][0]:  # Check if the cell is empty
-                block = self.create_block(command_label, row, 0)
-                self.grid_cells[row][0] = block  # Store the block in the grid
-                self.command_list.append(block)  # Add the block to the list
-                block.bind("<Button-1><Button-1>", self.on_drag_start)
-                block.bind("<B1-Motion>", self.on_drag_motion)
-                block.bind("<ButtonRelease-1>", self.on_drop)
+            if not self.grid_cells[row][0]:  # Find an empty row
+                block = self.create_block(command_label, row, 0, command_module)
+                self.grid_cells[row][0] = block
+                self.command_list.append(block)
                 return
+
         self.add_row()
-        self.add_block_to_grid(command_label)
+        self.add_block_to_grid(command_label, command_module)
 
 
+    def create_block(self, command_label, row, col, command_module):
+        command_name = command_label.cget("text").strip()
+        
+        # Ensure we are getting the correct module
+        print(f"🛠 Creating block for '{command_name}' from module {command_module}")  # Debugging print
+
+        if command_name not in command_module:
+            print(f"🚨 Error: '{command_name}' not found in module. Available: {list(command_module.keys())}")
+            return None
+
+        inputs = command_module[command_name].get("inputs", {})
+
+        print(f"🎤 Inputs for '{command_name}': {inputs}")  # Debugging print
+
+        color = command_label.cget("bg")
+        block = tk.Frame(
+            self.programming_area, bg=color, relief="raised", bd=2,
+            width=self.CELL_WIDTH, height=self.CELL_HEIGHT
+        )
+        block.place(x=col * self.CELL_WIDTH, y=row * self.CELL_HEIGHT)
+
+        content_frame = tk.Frame(block, bg=color)
+        content_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+        label = tk.Label(
+            content_frame, text=command_name, bg=color, fg="white", font=("Arial", 12, "bold"), anchor="w"
+        )
+        label.pack(side="left", padx=5)
+
+        input_vars = {}
+
+        for label_text, var_name in inputs.items():
+            print(f"🎤 Adding input field: {label_text} -> {var_name}")  # Debugging print
+
+            tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
+
+            input_var = tk.StringVar()
+            input_entry = tk.Entry(content_frame, textvariable=input_var, width=20)
+            input_entry.pack(side="left", padx=5)
+
+            input_vars[var_name] = input_var
+
+        block.input_vars = input_vars
+        block.grid_row = row
+        block.grid_col = col
+
+        return block
+
+    """
     def create_block(self, command_label, row, col):
         # Create a draggable block in the programming area
         color = command_label.cget("bg")
@@ -211,7 +264,7 @@ class PreProgrammingPage:
         block.grid_row = row
         block.grid_col = col
         return block
-
+    """
 
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())

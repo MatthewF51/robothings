@@ -51,11 +51,13 @@ def load_modules():
     modules = {}
 
     for module_name in os.listdir(modules_path):
-        if module_name.endswith(".py") and module_name != "__init__.py":
+        print(module_name)
+        if module_name.endswith(".py") and module_name != "__init__.py" and module_name != "__pycache__":
             module_name = module_name[:-3]  # Remove .py extension
             module = importlib.import_module(f"Modules.{module_name}")
             
             if hasattr(module, "COMMANDS") and hasattr(module, "colour"):
+                print(module.COMMANDS)
                 modules[module_name] = {
                     "commands": module.COMMANDS,
                     "color": module.colour

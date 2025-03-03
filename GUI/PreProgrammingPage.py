@@ -159,12 +159,11 @@ class PreProgrammingPage:
 
 
 
-    def create_block(self, command_label, row, col, command_module):
+    def create_block(self, command_label, row, col, command_module):    
         command_name = command_label.cget("text").strip()
 
         print(f"🛠 Creating block for '{command_name}' from module {command_module}")  # Debugging print
 
-        # Ensure correct module reference
         if command_name not in command_module:
             print(f"🚨 Error: '{command_name}' not found in module. Available: {list(command_module.keys())}")
             return None
@@ -181,6 +180,9 @@ class PreProgrammingPage:
 
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # 🛠 Store the command name inside the block for later retrieval
+        block.command_name = command_name  
 
         label = tk.Label(
             content_frame, text=command_name, bg=color, fg="white", font=("Arial", 12, "bold"), anchor="w"
@@ -207,7 +209,7 @@ class PreProgrammingPage:
         block.grid_row = row
         block.grid_col = col
 
-        # 🛠 Restore drag & drop logic (if it was missing)
+        # 🛠 Restore drag & drop logic
         block.bind("<Button-1>", lambda e, b=block: self.on_drag_start(e, b))
         block.bind("<B1-Motion>", lambda e, b=block: self.on_drag_motion(e, b))
         block.bind("<ButtonRelease-1>", lambda e, b=block: self.on_drop(e, b))
@@ -451,7 +453,11 @@ class PreProgrammingPage:
         def execute_commands():
             """Executes commands without blocking the UI."""
             for block in self.command_list:
-                command_name = block.command_label.cget("text")
+                command_name = getattr(block, "command_name", None)  # Use stored command name
+
+                if not command_name:
+                    print(f"🚨 Error: Block at row {block.grid_row} has no command_name!")
+                    continue
 
                 if command_name not in COMMANDS:
                     self.log_action(f"Error: Unknown command {command_name}")
@@ -471,11 +477,6 @@ class PreProgrammingPage:
                     command_function(*inputs.values())  # Run the function with input
                 except Exception as e:
                     self.log_action(f"Error running {command_name}: {e}")
-
-        threading.Thread(target=execute_commands, daemon=True).start()
-
-    
-        
 
 
     def save_program(self, file_name):

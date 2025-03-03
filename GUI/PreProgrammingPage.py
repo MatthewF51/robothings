@@ -505,13 +505,13 @@ class PreProgrammingPage:
         if command_name in ["Move Forward", "Move Backward"]:
             distance = float(inputs.get("distance", 0))  # Get distance
             speed = 0.5 
-            return distance / speed
+            return ((distance / speed) + 1)
 
         # Example: Rotation commands → Use degrees & rotation speed
         elif command_name in ["Rotate Left", "Rotate Right"]:
             degrees = float(inputs.get("degrees", 0))
             rotation_speed = 1
-            return (degrees * 3.14159265 / 180) / rotation_speed
+            return (((degrees * 3.14159265 / 180) / rotation_speed) + 1)
 
         # Default time if no estimation is available
         return 3  # Assume a safe default execution time

@@ -197,7 +197,7 @@ class PreProgrammingPage:
 
 
 
-    def create_block(self, command_label, row, col, command_module):
+    def create_block(self, command_label, command_module):
         command_name = command_label.cget("text").strip()
 
         if command_name not in command_module:
@@ -207,71 +207,92 @@ class PreProgrammingPage:
         inputs = command_module[command_name].get("inputs", {})
         color = command_label.cget("bg")
 
-        block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2, width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
+        block = tk.Frame(
+            self.programming_area,
+            bg=color,
+            relief="raised",
+            bd=2,
+            width=self.CELL_WIDTH,
+            height=self.CELL_HEIGHT,
+        )
+
+        # Add event bindings for dragging
+        block.bind("<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk))
+        block.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
+        block.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
 
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         block.command_name = command_name
-        block.command_module = command_module
+        block.command_module = command_module  # Store module reference
 
-        label = tk.Label(content_frame, text=command_name, bg=color, fg="white", font=("Arial", 12, "bold"), anchor="w")
+        label = tk.Label(
+            content_frame,
+            text=command_name,
+            bg=color,
+            fg="white",
+            font=("Arial", 12, "bold"),
+            anchor="w",
+        )
         label.pack(side="left", padx=5)
 
         input_vars = {}
+
         for label_text, var_name in inputs.items():
-            tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
+            tk.Label(
+                content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
+            ).pack(side="left", padx=5)
+
             input_var = tk.StringVar()
-            tk.Entry(content_frame, textvariable=input_var, width=20).pack(side="left", padx=5)
+            input_entry = tk.Entry(content_frame, textvariable=input_var, width=20)
+            input_entry.pack(side="left", padx=5)
+
             input_vars[var_name] = input_var
 
         block.input_vars = input_vars
-        block.grid_row = row
-        block.grid_col = col
 
         return block
 
 
+
     def on_drag_start(self, event, block):
+        # Start dragging a block
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
-        # Start dragging a block
+        # Store the widget being dragged
         self.drag_data["widget"] = block
         self.drag_data["row"] = block.grid_row
         self.drag_data["col"] = block.grid_col
 
-        # Remove block from its old position
+        # Temporarily remove it from the grid tracking
         self.grid_cells[block.grid_row][block.grid_col] = None
-        block.lift()  # Bring the block to the front
 
-        # Clear the highlight rectangle if it exists
-        self.clear_highlight()
+        # Lift the block to make sure it stays on top of other UI elements
+        block.lift()
+
 
 
     def on_drag_motion(self, event, block):
-        fixed_offset_x = 260
-        fixed_offset_y = 80
+        # Move the block with the cursor while dragging
+        if not self.drag_data["widget"]:
+            return  # Prevent errors if dragging isn't started properly
 
-        # Adjust for scrolling position
-        y_offset = self.scroll_position * self.CELL_HEIGHT
+        x = self.programming_area.canvasx(event.x_root - self.frame.winfo_rootx())
+        y = self.programming_area.canvasy(event.y_root - self.frame.winfo_rooty())
 
-        # Get mouse position relative to the programming area
-        x = self.programming_area.canvasx(event.x_root - self.frame.winfo_rootx()) - fixed_offset_x
-        y = self.programming_area.canvasy(event.y_root - self.frame.winfo_rooty()) - fixed_offset_y + y_offset
-
-        # Keep block within bounds
+        # Constrain movement to programming area
         x = max(0, min(x, self.CELL_WIDTH - block.winfo_width()))
-        y = max(0, min(y, (self.GRID_ROWS - 1) * self.CELL_HEIGHT))
+        y = max(0, min(y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
 
-        # Move block with cursor
+        # Move the block
         block.place(x=x, y=y)
 
-        # Determine the row under the cursor
+        # Highlight the row where the block will be dropped
         target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
-
-        # Highlight the target row
         self.highlight_target_row(target_row)
+
 
     def highlight_target_row(self, target_row):
         # Highlight the target row
@@ -295,31 +316,42 @@ class PreProgrammingPage:
             )
 
     def on_drop(self, event, block):
+        """Drops the block into the correct slot after dragging."""
         if block and self.highlight_rect:
+            # Get the highlighted row's Y position
             coords = self.programming_area.coords(self.highlight_rect)
+            if not coords:
+                return  # If no highlight, do nothing
+            
             target_row = int(coords[1] // self.CELL_HEIGHT)
 
-            # If the row is occupied, move blocks down
-            if self.grid_cells[target_row][0]:
+            # If there's already a block in the target row, shift everything down
+            if self.grid_cells[target_row][0] is not None:
                 self.move_blocks_down(target_row)
 
-            # Place block in the new row
+            # Assign block to the new row
             block.grid_row = target_row
             block.grid_col = 0
             self.grid_cells[target_row][0] = block
+
+            # Move block to new position
             block.place(x=0, y=target_row * self.CELL_HEIGHT)
 
-            # Ensure new state is captured
+            # Capture state for undo functionality
             new_state = self.capture_state()
             if new_state and (not self.undo_list or self.undo_list[-1] != new_state):
                 self.undo_list.append(new_state)
                 self.redo_list.clear()
 
+            # Update the command list and shift blocks if necessary
             self.update_command_list()
             self.move_blocks_up()
 
+        # Clear drag data
         self.drag_data = {"widget": None, "row": None, "col": None}
         self.clear_highlight()
+
+
 
 
     def move_blocks_down(self, start_row):
@@ -713,19 +745,16 @@ class PreProgrammingPage:
             for widget in slot.winfo_children():
                 widget.destroy()
 
-        # Reset grid tracking
+        # Reset all internal state tracking blocks
         self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
-        
-        # Reset all related lists
         self.command_list.clear()
         self.undo_list.clear()
         self.redo_list.clear()
-        
-        # Reset scroll position
-        self.scroll_position = 0
 
-        # Ensure UI is refreshed
+        # Reset scroll position and refresh UI
+        self.scroll_position = 0
         self.refresh_visible_blocks()
+
 
 
     def add_row(self):

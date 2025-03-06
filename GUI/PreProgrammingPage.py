@@ -159,9 +159,23 @@ class PreProgrammingPage:
         self.redo_list.clear()
         next_row = len(self.command_list)
         col = 0  # Always column 0
+
         block = self.create_block(command_label, next_row, col, command_module)
+        if block is None:
+            return
+
+        # **Fix**: Set grid_cell at next_row
+        if next_row >= len(self.grid_cells):
+            # Optionally, add a new row if next_row is beyond current grid size
+            self.grid_cells.append([None for _ in range(self.GRID_COLS)])
+        block.grid_row = next_row
+        block.grid_col = col
+        self.grid_cells[next_row][col] = block
+
+        # Add to command list and refresh visible slots
         self.command_list.append(block)
         self.refresh_visible_blocks()
+        print(f"[add_block_to_grid] Added block '{block.command_name}' at row {next_row}")
 
     def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()

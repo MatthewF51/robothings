@@ -241,33 +241,30 @@ class PreProgrammingPage:
         self.drag_data["row"] = block.grid_row
         self.drag_data["col"] = block.grid_col
 
-        # Temporarily free the current grid cell
+        # Remove block from its old position
         self.grid_cells[block.grid_row][block.grid_col] = None
+        block.lift()  # Bring the block to the front
 
         # Clear the highlight rectangle if it exists
         self.clear_highlight()
 
+
     def on_drag_motion(self, event, block):
-        # Handle motion of a dragged block
-        # Adjustments to account for consistent offset
         fixed_offset_x = 260
         fixed_offset_y = 80
 
-        # Calculate mouse position relative to the programming_area
-        x = (
-            self.programming_area.canvasx(event.x_root - self.frame.winfo_rootx())
-            - fixed_offset_x
-        )
-        y = (
-            self.programming_area.canvasy(event.y_root - self.frame.winfo_rooty())
-            - fixed_offset_y
-        )
+        # Adjust for scrolling position
+        y_offset = self.scroll_position * self.CELL_HEIGHT
 
-        # Constrain the cursor position within the grid
+        # Get mouse position relative to the programming area
+        x = self.programming_area.canvasx(event.x_root - self.frame.winfo_rootx()) - fixed_offset_x
+        y = self.programming_area.canvasy(event.y_root - self.frame.winfo_rooty()) - fixed_offset_y + y_offset
+
+        # Keep block within bounds
         x = max(0, min(x, self.CELL_WIDTH - block.winfo_width()))
-        y = max(0, min(y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+        y = max(0, min(y, (self.GRID_ROWS - 1) * self.CELL_HEIGHT))
 
-        # Move the block to follow the cursor with adjusted position
+        # Move block with cursor
         block.place(x=x, y=y)
 
         # Determine the row under the cursor
@@ -298,34 +295,32 @@ class PreProgrammingPage:
             )
 
     def on_drop(self, event, block):
-        # Capture state only if a block was actually moved
         if block and self.highlight_rect:
             coords = self.programming_area.coords(self.highlight_rect)
             target_row = int(coords[1] // self.CELL_HEIGHT)
 
-            # Move block into position
+            # If the row is occupied, move blocks down
             if self.grid_cells[target_row][0]:
                 self.move_blocks_down(target_row)
 
+            # Place block in the new row
             block.grid_row = target_row
             block.grid_col = 0
             self.grid_cells[target_row][0] = block
             block.place(x=0, y=target_row * self.CELL_HEIGHT)
 
-            # Capture only if the position has changed
-            if block.grid_row != target_row:
-                new_state = self.capture_state()
-                if new_state and (
-                    not self.undo_list or self.undo_list[-1] != new_state
-                ):
-                    self.undo_list.append(new_state)
-                    self.redo_list.clear()
+            # Ensure new state is captured
+            new_state = self.capture_state()
+            if new_state and (not self.undo_list or self.undo_list[-1] != new_state):
+                self.undo_list.append(new_state)
+                self.redo_list.clear()
 
             self.update_command_list()
             self.move_blocks_up()
 
         self.drag_data = {"widget": None, "row": None, "col": None}
         self.clear_highlight()
+
 
     def move_blocks_down(self, start_row):
         # Move all blocks from start_row down by one row
@@ -503,22 +498,15 @@ class PreProgrammingPage:
             with open(file_path, "w") as file:
                 for block in self.command_list:
                     command_name = block.command_name
-                    module_name = getattr(
-                        block, "command_module_name", "Unknown"
-                    )  # Store module name
-                    inputs = {
-                        var_name: var.get()
-                        for var_name, var in block.input_vars.items()
-                    }
+                    module_name = getattr(block, "command_module_name", "Unknown")
+                    inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
 
-                    input_line = (
-                        f"{command_name};{module_name};"
-                        + ";".join(f"{k}={v}" for k, v in inputs.items())
-                        + "\n"
-                    )
+                    # Format: command_name;module_name;key=value;key=value
+                    input_line = f"{command_name};{module_name};" + ";".join(f"{k}={v}" for k, v in inputs.items()) + "\n"
                     file.write(input_line)
 
             messagebox.showinfo("Save", f"Program saved to {file_path}!")
+
         except Exception as e:
             messagebox.showerror("Save Error", f"Error saving program: {e}")
 
@@ -548,17 +536,14 @@ class PreProgrammingPage:
 
                     command_module = modules_commands[module_name]["commands"]
                     if command_name not in command_module:
-                        print(
-                            f"ERROR: Command '{command_name}' not found in '{module_name}'!"
-                        )
+                        print(f"ERROR: Command '{command_name}' not found in '{module_name}'!")
                         continue
 
                     # Create block with correct module and inputs
-                    block = self.create_block_from_data(
-                        command_name, command_module, inputs
-                    )
+                    block = self.create_block_from_data(command_name, command_module, inputs)
 
-                    for row in range(len(self.grid_cells)):  # Find empty row
+                    # Find empty row
+                    for row in range(len(self.grid_cells)):
                         if not self.grid_cells[row][0]:
                             block.grid_row = row
                             block.grid_col = 0
@@ -570,9 +555,7 @@ class PreProgrammingPage:
 
                 self.move_blocks_up()
 
-            messagebox.showinfo(
-                "Load Success", f"Program '{file_name}.txt' loaded successfully."
-            )
+            messagebox.showinfo("Load Success", f"Program '{file_name}.txt' loaded successfully.")
 
         except FileNotFoundError:
             messagebox.showerror("Load Error", f"File '{file_name}.txt' not found.")
@@ -584,30 +567,29 @@ class PreProgrammingPage:
             messagebox.showinfo("Undo", "Nothing to undo")
             return
 
-        # Capture current state before undoing, ensuring it's not a duplicate
+        # Save current state before undoing (for redo)
         current_state = self.capture_state()
-        if current_state and (
-            not self.redo_list or self.redo_list[-1] != current_state
-        ):
+        if current_state and (not self.redo_list or self.redo_list[-1] != current_state):
             self.redo_list.append(current_state)
 
+        # Restore last saved state
         last_state = self.undo_list.pop()
         self.restore_state(last_state)
+
 
     def redo_last_action(self):
         if not self.redo_list:
             messagebox.showinfo("Redo", "Nothing to redo")
             return
 
-        # Capture current state before redoing, ensuring it's not a duplicate
+        # Save current state before redoing (for undo)
         current_state = self.capture_state()
-        if current_state and (
-            not self.undo_list or self.undo_list[-1] != current_state
-        ):
+        if current_state and (not self.undo_list or self.undo_list[-1] != current_state):
             self.undo_list.append(current_state)
 
         last_state = self.redo_list.pop()
         self.restore_state(last_state)
+
 
     def capture_state(self):
         # Capture the current state of the programming area
@@ -629,9 +611,9 @@ class PreProgrammingPage:
         self.redo_list.clear()
 
     def restore_state(self, state):
-        # Restore a previous state of the programming area
+        # Clear previous blocks
         self.clear_programming_area()
-        
+
         modules_commands = load_modules()  # Reload available modules
 
         for command_name, module_name, inputs, row in state:
@@ -646,9 +628,17 @@ class PreProgrammingPage:
 
             # Create block using stored data
             block = self.create_block_from_data(command_name, command_module, inputs)
+
+            # Place block in the correct row
+            self.grid_cells[row][0] = block
+            block.grid_row = row
+            block.grid_col = 0
+            block.place(x=0, y=row * self.CELL_HEIGHT)
+
             self.command_list.append(block)
 
-        self.refresh_visible_blocks()
+        self.move_blocks_up()
+
 
 
     def create_block_from_data(self, command_name, expected_inputs, input_values):
@@ -718,13 +708,25 @@ class PreProgrammingPage:
         )
 
     def clear_programming_area(self):
-        # Clear all commands from the programming area
-        for widget in self.programming_area.winfo_children():
-            widget.destroy()
-        self.grid_cells = [
-            [None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)
-        ]
+        # Clear all blocks from the UI
+        for slot in self.grid_slots:
+            for widget in slot.winfo_children():
+                widget.destroy()
+
+        # Reset grid tracking
+        self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
+        
+        # Reset all related lists
         self.command_list.clear()
+        self.undo_list.clear()
+        self.redo_list.clear()
+        
+        # Reset scroll position
+        self.scroll_position = 0
+
+        # Ensure UI is refreshed
+        self.refresh_visible_blocks()
+
 
     def add_row(self):
         # Add a new row to the grid and adjust the canvas size

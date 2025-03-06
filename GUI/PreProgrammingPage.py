@@ -264,14 +264,12 @@ class PreProgrammingPage:
 
         # Store the widget being dragged
         self.drag_data["widget"] = block
-        self.drag_data["row"] = block.grid_row
-        self.drag_data["col"] = block.grid_col
+        self.drag_data["start_x"] = event.x
+        self.drag_data["start_y"] = event.y
 
-        # Temporarily remove it from the grid tracking
-        self.grid_cells[block.grid_row][block.grid_col] = None
-
-        # Lift the block to make sure it stays on top of other UI elements
+        # Lift the block so it appears above others
         block.lift()
+
 
 
 
@@ -280,20 +278,16 @@ class PreProgrammingPage:
         if not self.drag_data["widget"]:
             return  # Prevent errors if dragging isn't started properly
 
-        x = event.x_root - self.frame.winfo_rootx()
-        y = event.y_root - self.frame.winfo_rooty()
-
-
-        # Constrain movement to programming area
-        x = max(0, min(x, self.CELL_WIDTH - block.winfo_width()))
-        y = max(0, min(y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+        # Calculate movement
+        dx = event.x - self.drag_data["start_x"]
+        dy = event.y - self.drag_data["start_y"]
 
         # Move the block
-        block.place(x=x, y=y)
+        block.place(x=block.winfo_x() + dx, y=block.winfo_y() + dy)
 
-        # Highlight the row where the block will be dropped
-        target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
-        self.highlight_target_row(target_row)
+        # Update drag start position
+        self.drag_data["start_x"] = event.x
+        self.drag_data["start_y"] = event.y
 
 
     def highlight_target_row(self, target_row):
@@ -318,41 +312,32 @@ class PreProgrammingPage:
             )
 
     def on_drop(self, event, block):
-        """Drops the block into the correct slot after dragging."""
-        if block and self.highlight_rect:
-            # Get the highlighted row's Y position
-            coords = self.programming_area.coords(self.highlight_rect)
-            if not coords:
-                return  # If no highlight, do nothing
-            
-            target_row = int(coords[1] // self.CELL_HEIGHT)
+        # Drop the block into the correct slot after dragging
+        if not block:
+            return
 
-            # If there's already a block in the target row, shift everything down
-            if self.grid_cells[target_row][0] is not None:
-                self.move_blocks_down(target_row)
+        # Find nearest row
+        y = block.winfo_y()
+        target_row = max(0, min(y // self.CELL_HEIGHT, self.GRID_ROWS - 1))
 
-            # Assign block to the new row
-            block.grid_row = target_row
-            block.grid_col = 0
-            self.grid_cells[target_row][0] = block
+        # Ensure there's space in the row
+        if self.grid_cells[target_row][0] is not None:
+            self.move_blocks_down(target_row)
 
-            # Move block to new position
-            block.place(x=0, y=target_row * self.CELL_HEIGHT)
+        # Assign block to the new row
+        block.grid_row = target_row
+        block.grid_col = 0
+        self.grid_cells[target_row][0] = block
 
-            # Capture state for undo functionality
-            new_state = self.capture_state()
-            if new_state and (not self.undo_list or self.undo_list[-1] != new_state):
-                self.undo_list.append(new_state)
-                self.redo_list.clear()
+        # Place block correctly
+        block.place(x=0, y=target_row * self.CELL_HEIGHT)
 
-            # Update the command list and shift blocks if necessary
-            self.update_command_list()
-            self.move_blocks_up()
+        # Capture state for undo functionality
+        self.undo_list.append(self.capture_state())
+        self.redo_list.clear()
 
         # Clear drag data
-        self.drag_data = {"widget": None, "row": None, "col": None}
-        self.clear_highlight()
-
+        self.drag_data = {"widget": None, "start_x": None, "start_y": None}
 
 
 

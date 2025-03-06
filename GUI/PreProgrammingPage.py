@@ -20,7 +20,13 @@ class PreProgrammingPage:
         self.controller = controller
 
         # Drag-and-drop tracking (with offset values)
-        self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
+        self.drag_data = {
+            "widget": None,
+            "row": None,
+            "col": None,
+            "offset_x": 0,
+            "offset_y": 0,
+        }
 
         # Grid tracking
         self.grid_cells = [
@@ -35,7 +41,7 @@ class PreProgrammingPage:
         self.scroll_position = 0  # Current scroll index
 
         self.module_colors = {}
-        
+
         self.last_highlighted_row = None
 
         self.setup_ui()
@@ -103,22 +109,30 @@ class PreProgrammingPage:
         # Create visible grid slots
         self.grid_slots = []
         for i in range(self.visible_rows):
-            slot = tk.Frame(self.programming_area, bg="lightgray", height=self.CELL_HEIGHT)
+            slot = tk.Frame(
+                self.programming_area, bg="lightgray", height=self.CELL_HEIGHT
+            )
             slot.grid(row=i, column=0, sticky="ew", padx=5, pady=2)
             self.grid_slots.append(slot)
 
         # Scroll buttons
         scroll_controls = tk.Frame(programming_frame, bg="white")
         scroll_controls.pack(fill="x", pady=5)
-        tk.Button(scroll_controls, text="⬆ Scroll Up", command=self.scroll_up).pack(side="left", expand=True)
-        tk.Button(scroll_controls, text="⬇ Scroll Down", command=self.scroll_down).pack(side="right", expand=True)
+        tk.Button(scroll_controls, text="⬆ Scroll Up", command=self.scroll_up).pack(
+            side="left", expand=True
+        )
+        tk.Button(scroll_controls, text="⬇ Scroll Down", command=self.scroll_down).pack(
+            side="right", expand=True
+        )
 
         # Box D: Log Area
         self.log_section = tk.LabelFrame(
             self.frame, text="Action Log", bg="white", font=("Arial", 10, "bold")
         )
         self.log_section.grid(row=0, column=2, rowspan=2, sticky="nsew", padx=5, pady=5)
-        self.log_text = tk.Text(self.log_section, wrap="word", height=20, state="disabled", bg="lightgray")
+        self.log_text = tk.Text(
+            self.log_section, wrap="word", height=20, state="disabled", bg="lightgray"
+        )
         self.log_text.pack(fill="both", expand=True, padx=5, pady=5)
         self.log_scroll = ttk.Scrollbar(self.log_section, command=self.log_text.yview)
         self.log_scroll.pack(side="right", fill="y")
@@ -135,8 +149,12 @@ class PreProgrammingPage:
         for module_name, module_data in modules_commands.items():
             commands = module_data["commands"]
             color = module_data["color"]
-            print(f"Loading Module: {module_name}, Available Commands: {list(commands.keys())}")
-            module_label = tk.Label(command_frame, text=module_name, font=("Arial", 10, "bold"))
+            print(
+                f"Loading Module: {module_name}, Available Commands: {list(commands.keys())}"
+            )
+            module_label = tk.Label(
+                command_frame, text=module_name, font=("Arial", 10, "bold")
+            )
             module_label.pack(pady=5)
             for command_name in commands.keys():
                 print(f"Adding command: '{command_name}' from Module: {module_name}")
@@ -153,7 +171,9 @@ class PreProgrammingPage:
                 command_label.pack(pady=2, padx=5, fill="x")
                 command_label.bind(
                     "<Button-1>",
-                    lambda e, label=command_label, mod=commands: self.add_block_to_grid(label, mod),
+                    lambda e, label=command_label, mod=commands: self.add_block_to_grid(
+                        label, mod
+                    ),
                 )
 
     def add_block_to_grid(self, command_label, command_module):
@@ -177,17 +197,27 @@ class PreProgrammingPage:
         # Add to command list and refresh visible slots
         self.command_list.append(block)
         self.refresh_visible_blocks()
-        print(f"[add_block_to_grid] Added block '{block.command_name}' at row {next_row}")
+        print(
+            f"[add_block_to_grid] Added block '{block.command_name}' at row {next_row}"
+        )
 
     def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()
         if command_name not in command_module:
-            print(f"ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}")
+            print(
+                f"ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}"
+            )
             return None
         inputs = command_module[command_name].get("inputs", {})
         color = command_label.cget("bg")
-        block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2,
-                        width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
+        block = tk.Frame(
+            self.programming_area,
+            bg=color,
+            relief="raised",
+            bd=2,
+            width=self.CELL_WIDTH,
+            height=self.CELL_HEIGHT,
+        )
         # Store original background color to restore after highlighting.
         block.original_bg = color
 
@@ -198,28 +228,48 @@ class PreProgrammingPage:
         block.command_module = command_module
         block.grid_row = row
         block.grid_col = col
-        label = tk.Label(content_frame, text=command_name, bg=color, fg="white",
-                        font=("Arial", 12, "bold"), anchor="w")
+        label = tk.Label(
+            content_frame,
+            text=command_name,
+            bg=color,
+            fg="white",
+            font=("Arial", 12, "bold"),
+            anchor="w",
+        )
         label.pack(side="left", padx=5)
         input_vars = {}
         for label_text, var_name in inputs.items():
-            tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
+            tk.Label(
+                content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
+            ).pack(side="left", padx=5)
             input_var = tk.StringVar()
-            tk.Entry(content_frame, textvariable=input_var, width=20).pack(side="left", padx=5)
+            tk.Entry(content_frame, textvariable=input_var, width=20).pack(
+                side="left", padx=5
+            )
             input_vars[var_name] = input_var
         block.input_vars = input_vars
 
         # Bind drag events to both block and its content_frame
-        block.bind("<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk))
-        block.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
-        block.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
-        content_frame.bind("<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk))
-        content_frame.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
-        content_frame.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
+        block.bind(
+            "<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk)
+        )
+        block.bind(
+            "<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk)
+        )
+        block.bind(
+            "<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk)
+        )
+        content_frame.bind(
+            "<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk)
+        )
+        content_frame.bind(
+            "<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk)
+        )
+        content_frame.bind(
+            "<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk)
+        )
 
         return block
-
-
 
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())
@@ -230,7 +280,9 @@ class PreProgrammingPage:
         self.drag_data["offset_y"] = event.y_root - block.winfo_rooty()
         self.drag_data["row"] = block.grid_row
         self.drag_data["col"] = block.grid_col
-        print(f"[on_drag_start] Block '{block.command_name}' at row {block.grid_row} started drag; offset=({self.drag_data['offset_x']}, {self.drag_data['offset_y']})")
+        print(
+            f"[on_drag_start] Block '{block.command_name}' at row {block.grid_row} started drag; offset=({self.drag_data['offset_x']}, {self.drag_data['offset_y']})"
+        )
         # Free the grid cell
         self.grid_cells[block.grid_row][block.grid_col] = None
         self.clear_highlight()
@@ -241,10 +293,14 @@ class PreProgrammingPage:
         new_x = event.x_root - prog_area_x - self.drag_data["offset_x"]
         new_y = event.y_root - prog_area_y - self.drag_data["offset_y"]
         new_x = max(0, min(new_x, self.CELL_WIDTH - block.winfo_width()))
-        new_y = max(0, min(new_y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+        new_y = max(
+            0, min(new_y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height())
+        )
         block.place(x=new_x, y=new_y)
         target_row = max(0, min(int(new_y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
-        print(f"[on_drag_motion] Block '{block.command_name}' moved to x={new_x}, y={new_y}; target row: {target_row}")
+        print(
+            f"[on_drag_motion] Block '{block.command_name}' moved to x={new_x}, y={new_y}; target row: {target_row}"
+        )
         self.highlight_target_row(target_row)
 
     def highlight_target_row(self, target_row):
@@ -284,14 +340,17 @@ class PreProgrammingPage:
                     block.winfo_children()[0].config(bg=block.original_bg)
         print("[clear_highlight] Cleared highlights.")
 
-
     def on_drop(self, event, block):
         if block:
             y = block.winfo_y()
             target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
-            print(f"[on_drop] Block '{block.command_name}' dropped at y={y}, computed target row: {target_row}")
+            print(
+                f"[on_drop] Block '{block.command_name}' dropped at y={y}, computed target row: {target_row}"
+            )
             if self.grid_cells[target_row][0]:
-                print(f"[on_drop] Target row {target_row} is occupied. Shifting blocks down.")
+                print(
+                    f"[on_drop] Target row {target_row} is occupied. Shifting blocks down."
+                )
                 self.move_blocks_down(target_row)
             else:
                 print(f"[on_drop] Target row {target_row} is empty.")
@@ -302,8 +361,16 @@ class PreProgrammingPage:
             print(f"[on_drop] Placed block '{block.command_name}' in row {target_row}.")
             self.update_command_list()
             self.move_blocks_up()
-            print(f"[on_drop] After moving blocks up, command_list: {self.command_list}")
-        self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
+            print(
+                f"[on_drop] After moving blocks up, command_list: {self.command_list}"
+            )
+        self.drag_data = {
+            "widget": None,
+            "row": None,
+            "col": None,
+            "offset_x": 0,
+            "offset_y": 0,
+        }
         self.clear_highlight()
 
     def move_blocks_down(self, start_row):
@@ -314,7 +381,9 @@ class PreProgrammingPage:
         for row in range(len(self.grid_cells) - 1, start_row, -1):
             if self.grid_cells[row - 1][0]:
                 block = self.grid_cells[row - 1][0]
-                print(f"[move_blocks_down] Moving block '{block.command_name}' from row {row-1} to row {row}")
+                print(
+                    f"[move_blocks_down] Moving block '{block.command_name}' from row {row-1} to row {row}"
+                )
                 self.grid_cells[row][0] = block
                 self.grid_cells[row - 1][0] = None
                 block.grid_row = row
@@ -329,7 +398,9 @@ class PreProgrammingPage:
             for row in range(len(self.grid_cells) - 1):
                 if not self.grid_cells[row][0] and self.grid_cells[row + 1][0]:
                     block = self.grid_cells[row + 1][0]
-                    print(f"[move_blocks_up] Moving block '{block.command_name}' up from row {row+1} to row {row}")
+                    print(
+                        f"[move_blocks_up] Moving block '{block.command_name}' up from row {row+1} to row {row}"
+                    )
                     self.grid_cells[row][0] = block
                     self.grid_cells[row + 1][0] = None
                     block.grid_row = row
@@ -461,172 +532,182 @@ class PreProgrammingPage:
         return 10  # Assume a safe default execution time
 
     def save_program(self, file_name):
-        os.makedirs("SavedFiles", exist_ok=True)  # Ensure the directory exists
-
-        if not file_name:
-            messagebox.showwarning("Save", "Please enter a valid file name.")
-            return
-
+        os.makedirs("SavedFiles", exist_ok=True)
         file_path = os.path.join("SavedFiles", f"{file_name}.txt")
-
         try:
             with open(file_path, "w") as file:
                 for block in self.command_list:
+                    if not block.winfo_exists():
+                        continue
                     command_name = block.command_name
-                    module_name = getattr(
-                        block, "command_module_name", "Unknown"
-                    )  # Store module name
+                    module_name = getattr(block, "command_module_name", "Unknown")
                     inputs = {
                         var_name: var.get()
                         for var_name, var in block.input_vars.items()
                     }
-
                     input_line = (
                         f"{command_name};{module_name};"
                         + ";".join(f"{k}={v}" for k, v in inputs.items())
                         + "\n"
                     )
                     file.write(input_line)
-
             messagebox.showinfo("Save", f"Program saved to {file_path}!")
+            print(f"[save_program] Program saved to {file_path}")
         except Exception as e:
             messagebox.showerror("Save Error", f"Error saving program: {e}")
+            print(f"[save_program] ERROR: {e}")
 
     def load_program(self, file_name):
         try:
-            self.clear_programming_area()  # Clear previous blocks
-
+            self.clear_programming_area()
             file_path = os.path.join("SavedFiles", f"{file_name}.txt")
-
             with open(file_path, "r") as file:
                 for line in file:
                     line = line.strip()
                     if not line:
                         continue
-
-                    # Read command_name, module_name, and input values
                     parts = line.split(";")
                     command_name = parts[0]
                     module_name = parts[1]
                     inputs = {kv.split("=")[0]: kv.split("=")[1] for kv in parts[2:]}
-
-                    # Find correct module
                     modules_commands = load_modules()
                     if module_name not in modules_commands:
-                        print(f"ERROR: Module '{module_name}' not found!")
+                        print(
+                            f"[load_program] ERROR: Module '{module_name}' not found!"
+                        )
                         continue
-
                     command_module = modules_commands[module_name]["commands"]
                     if command_name not in command_module:
                         print(
-                            f"ERROR: Command '{command_name}' not found in '{module_name}'!"
+                            f"[load_program] ERROR: Command '{command_name}' not found in '{module_name}'!"
                         )
                         continue
-
-                    # Create block with correct module and inputs
                     block = self.create_block_from_data(
                         command_name, command_module, inputs
                     )
-
-                    for row in range(len(self.grid_cells)):  # Find empty row
-                        if not self.grid_cells[row][0]:
-                            block.grid_row = row
+                    # Find first empty row
+                    placed = False
+                    for r in range(len(self.grid_cells)):
+                        if not self.grid_cells[r][0]:
+                            block.grid_row = r
                             block.grid_col = 0
-                            block.place(x=0, y=row * self.CELL_HEIGHT)
-                            self.grid_cells[row][0] = block
+                            block.place(x=0, y=r * self.CELL_HEIGHT)
+                            self.grid_cells[r][0] = block
+                            placed = True
                             break
-
+                    if not placed:
+                        self.add_row()
+                        r = len(self.grid_cells) - 1
+                        block.grid_row = r
+                        block.grid_col = 0
+                        block.place(x=0, y=r * self.CELL_HEIGHT)
+                        self.grid_cells[r][0] = block
                     self.command_list.append(block)
-
-                self.move_blocks_up()
-
+            self.move_blocks_up()
+            self.refresh_visible_blocks()
             messagebox.showinfo(
                 "Load Success", f"Program '{file_name}.txt' loaded successfully."
             )
-
+            print(f"[load_program] Loaded program from {file_path}")
         except FileNotFoundError:
             messagebox.showerror("Load Error", f"File '{file_name}.txt' not found.")
+            print(f"[load_program] ERROR: File '{file_name}.txt' not found.")
         except Exception as e:
             messagebox.showerror("Load Error", f"Error loading program: {e}")
+            print(f"[load_program] ERROR: {e}")
 
     def undo_last_action(self):
         if not self.undo_list:
             messagebox.showinfo("Undo", "Nothing to undo")
             return
-
-        # Capture current state before undoing, ensuring it's not a duplicate
         current_state = self.capture_state()
         if current_state and (
             not self.redo_list or self.redo_list[-1] != current_state
         ):
             self.redo_list.append(current_state)
-
         last_state = self.undo_list.pop()
+        print("[undo_last_action] Restoring state:", last_state)
         self.restore_state(last_state)
 
     def redo_last_action(self):
         if not self.redo_list:
             messagebox.showinfo("Redo", "Nothing to redo")
             return
-
-        # Capture current state before redoing, ensuring it's not a duplicate
         current_state = self.capture_state()
         if current_state and (
             not self.undo_list or self.undo_list[-1] != current_state
         ):
             self.undo_list.append(current_state)
-
         last_state = self.redo_list.pop()
+        print("[redo_last_action] Restoring state:", last_state)
         self.restore_state(last_state)
 
     def capture_state(self):
-        # Capture the current state of the programming area
+        """Captures the current state as a list of tuples: (command_name, module_name, inputs, row_index)"""
         state = []
-
         for i, block in enumerate(self.command_list):
+            # Skip any destroyed block
+            if not block.winfo_exists():
+                continue
             command_name = block.command_name
+            # You may have stored the module name in block.command_module_name if desired.
             command_module_name = getattr(block, "command_module_name", "Unknown")
             inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
-
-            state.append((command_name, command_module_name, inputs, i))  # Store row index
-
+            state.append((command_name, command_module_name, inputs, i))
+        print("[capture_state] Captured state:", state)
         return state if not self.undo_list or self.undo_list[-1] != state else None
 
+    def restore_state(self, state):
+        """Restores the programming area from a captured state."""
+        print("[restore_state] Restoring state:", state)
+        # Clear current UI completely
+        self.clear_programming_area()
+        # Reload modules in case things have changed
+        modules_commands = load_modules()
+        for command_name, module_name, inputs, row in state:
+            if module_name not in modules_commands:
+                print(f"[restore_state] ERROR: Module '{module_name}' not found!")
+                continue
+            command_module = modules_commands[module_name]["commands"]
+            if command_name not in command_module:
+                print(
+                    f"[restore_state] ERROR: Command '{command_name}' not found in '{module_name}'!"
+                )
+                continue
+            # Create a block from stored data.
+            block = self.create_block_from_data(command_name, command_module, inputs)
+            if block is None:
+                continue
+            # Find the first empty row (or append a row if needed)
+            placed = False
+            for r in range(len(self.grid_cells)):
+                if not self.grid_cells[r][0]:
+                    block.grid_row = r
+                    block.grid_col = 0
+                    block.place(x=0, y=r * self.CELL_HEIGHT)
+                    self.grid_cells[r][0] = block
+                    placed = True
+                    break
+            if not placed:
+                self.add_row()
+                r = len(self.grid_cells) - 1
+                block.grid_row = r
+                block.grid_col = 0
+                block.place(x=0, y=r * self.CELL_HEIGHT)
+                self.grid_cells[r][0] = block
+            self.command_list.append(block)
+        self.refresh_visible_blocks()
+        print("[restore_state] New command_list:", self.command_list)
 
     def capture_input_change(self):
         # Capture state when a user modifies an input field
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
-    def restore_state(self, state):
-        # Restore a previous state of the programming area
-        self.clear_programming_area()
-        
-        modules_commands = load_modules()  # Reload available modules
-
-        for command_name, module_name, inputs, row in state:
-            if module_name not in modules_commands:
-                print(f"🚨 ERROR: Module '{module_name}' not found during restore!")
-                continue
-
-            command_module = modules_commands[module_name]["commands"]
-            if command_name not in command_module:
-                print(f"🚨 ERROR: Command '{command_name}' not found in '{module_name}'!")
-                continue
-
-            # Create block using stored data
-            block = self.create_block_from_data(command_name, command_module, inputs)
-            self.command_list.append(block)
-
-        self.refresh_visible_blocks()
-
-
     def create_block_from_data(self, command_name, expected_inputs, input_values):
-        # Get the module color or use a default
+        # Get the module color or use a default color
         color = self.module_colors.get(command_name.split()[0], "#FF5733")
-
-        # Create a block
-        row = len(self.command_list)  # Place it at the next available row
+        row = len(self.command_list)  # New block goes at the end of command_list
         col = 0
         block = tk.Frame(
             self.programming_area,
@@ -637,12 +718,8 @@ class PreProgrammingPage:
             height=self.CELL_HEIGHT,
         )
         block.place(x=col * self.CELL_WIDTH, y=row * self.CELL_HEIGHT)
-
-        # Create a container frame for the block's content
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
-        # Add command label
         label = tk.Label(
             content_frame,
             text=command_name,
@@ -652,29 +729,23 @@ class PreProgrammingPage:
             anchor="w",
         )
         label.pack(side="left", padx=5)
-        block.command_label = label  # Add reference to the block for easy access
-
-        # Add input fields dynamically based on the expected inputs
+        block.command_label = label
         input_vars = {}
         for label_text, var_name in expected_inputs.items():
             tk.Label(
                 content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
             ).pack(side="left", padx=5)
-            input_var = tk.StringVar(
-                value=input_values.get(var_name, "")
-            )  # Set saved value
+            input_var = tk.StringVar(value=input_values.get(var_name, ""))
             tk.Entry(content_frame, textvariable=input_var, width=8).pack(
                 side="left", padx=5
             )
             input_vars[var_name] = input_var
-
-        # Store inputs in the block for later use
         block.input_vars = input_vars
-
-        # Set grid attributes
         block.grid_row = row
         block.grid_col = col
-
+        block.command_name = command_name
+        # If you store module name during block creation, do it here:
+        block.command_module_name = "Unknown"  # or assign appropriately if available
         return block
 
     def create_command_label(self, command_name):
@@ -695,20 +766,22 @@ class PreProgrammingPage:
         # Recreate grid slots
         self.grid_slots = []
         for i in range(self.visible_rows):
-            slot = tk.Frame(self.programming_area, bg="lightgray", height=self.CELL_HEIGHT)
+            slot = tk.Frame(
+                self.programming_area, bg="lightgray", height=self.CELL_HEIGHT
+            )
             slot.grid(row=i, column=0, sticky="ew", padx=5, pady=2)
             self.grid_slots.append(slot)
 
         # Reset internal tracking data structures
-        self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
+        self.grid_cells = [
+            [None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)
+        ]
         self.command_list.clear()
         self.undo_list.clear()
         self.redo_list.clear()
         self.scroll_position = 0
 
         print("[clear_programming_area] Programming area cleared.")
-
-
 
     def add_row(self):
         # Add a new row to the grid and adjust the canvas size
@@ -735,12 +808,10 @@ class PreProgrammingPage:
             self.scroll_position -= 1
             self.refresh_visible_blocks()
 
-
     def scroll_down(self):
         if self.scroll_position + self.visible_rows < len(self.command_list):
             self.scroll_position += 1
             self.refresh_visible_blocks()
-
 
     def refresh_visible_blocks(self):
         # Clear current display
@@ -755,7 +826,6 @@ class PreProgrammingPage:
                 block = self.command_list[row_index]
                 block.grid_row = i  # Update position within visible rows
                 block.place(in_=self.grid_slots[i], x=0, y=0)
-
 
     def update_command_list(self):
         # Sort the command_list by the block's current vertical position (y coordinate)

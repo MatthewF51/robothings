@@ -20,7 +20,7 @@ class PreProgrammingPage:
         self.controller = controller
 
         # Drag-and-drop tracking
-        self.drag_data = {"widget": None, "row": None, "col": None}
+        self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
 
         # Grid tracking
         self.grid_cells = [
@@ -30,13 +30,9 @@ class PreProgrammingPage:
         self.undo_list = []
         self.redo_list = []
 
-        # To handle row highlighting
-        self.highlight_rect = None
-        
         # Scrolling stuff
         self.visible_rows = 8  # Number of visible rows at a time
         self.scroll_position = 0  # Current scroll index
-
 
         self.module_colors = {}
 
@@ -112,28 +108,21 @@ class PreProgrammingPage:
         # Scroll buttons
         scroll_controls = tk.Frame(programming_frame, bg="white")
         scroll_controls.pack(fill="x", pady=5)
-
         tk.Button(scroll_controls, text="⬆ Scroll Up", command=self.scroll_up).pack(side="left", expand=True)
         tk.Button(scroll_controls, text="⬇ Scroll Down", command=self.scroll_down).pack(side="right", expand=True)
-
-
 
         # Box D: Log Area
         self.log_section = tk.LabelFrame(
             self.frame, text="Action Log", bg="white", font=("Arial", 10, "bold")
         )
         self.log_section.grid(row=0, column=2, rowspan=2, sticky="nsew", padx=5, pady=5)
-
-        self.log_text = tk.Text(
-            self.log_section, wrap="word", height=20, state="disabled", bg="lightgray"
-        )
+        self.log_text = tk.Text(self.log_section, wrap="word", height=20, state="disabled", bg="lightgray")
         self.log_text.pack(fill="both", expand=True, padx=5, pady=5)
         self.log_scroll = ttk.Scrollbar(self.log_section, command=self.log_text.yview)
         self.log_scroll.pack(side="right", fill="y")
         self.log_text.config(yscrollcommand=self.log_scroll.set)
 
     def log_action(self, message):
-        # Appends a message to the log section
         self.log_text.config(state="normal")
         self.log_text.insert("end", f"{message}\n")
         self.log_text.config(state="disabled")
@@ -141,25 +130,14 @@ class PreProgrammingPage:
 
     def populate_command_section(self, command_frame):
         modules_commands = load_modules()  # Load all available modules
-
         for module_name, module_data in modules_commands.items():
             commands = module_data["commands"]
             color = module_data["color"]
-
-            print(
-                f"Loading Module: {module_name}, Available Commands: {list(commands.keys())}"
-            )  # Debugging print
-
-            module_label = tk.Label(
-                command_frame, text=module_name, font=("Arial", 10, "bold")
-            )
+            print(f"Loading Module: {module_name}, Available Commands: {list(commands.keys())}")
+            module_label = tk.Label(command_frame, text=module_name, font=("Arial", 10, "bold"))
             module_label.pack(pady=5)
-
             for command_name in commands.keys():
-                print(
-                    f"Adding command: '{command_name}' from Module: {module_name}"
-                )  # Debugging print
-
+                print(f"Adding command: '{command_name}' from Module: {module_name}")
                 command_label = tk.Label(
                     command_frame,
                     text=command_name.strip(),
@@ -171,198 +149,125 @@ class PreProgrammingPage:
                     pady=2,
                 )
                 command_label.pack(pady=2, padx=5, fill="x")
-
-                # Ensure correct module is passed when clicking the command
                 command_label.bind(
                     "<Button-1>",
-                    lambda e, label=command_label, mod=commands: self.add_block_to_grid(
-                        label, mod
-                    ),
+                    lambda e, label=command_label, mod=commands: self.add_block_to_grid(label, mod),
                 )
 
     def add_block_to_grid(self, command_label, command_module):
-        # Add a new block to the command list
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
-
-        # Get the next available row and column (always col=0)
         next_row = len(self.command_list)
         col = 0  # Always column 0
-
-        # Create the block with correct parameters
         block = self.create_block(command_label, next_row, col, command_module)
         self.command_list.append(block)
-
-        self.refresh_visible_blocks()  # Refresh UI after adding
-
-
+        self.refresh_visible_blocks()
 
     def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()
-
         if command_name not in command_module:
             print(f"ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}")
             return None
-
         inputs = command_module[command_name].get("inputs", {})
         color = command_label.cget("bg")
-
-        block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2, width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
-
+        block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2,
+                         width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
         block.command_name = command_name
         block.command_module = command_module
-
-        label = tk.Label(content_frame, text=command_name, bg=color, fg="white", font=("Arial", 12, "bold"), anchor="w")
+        block.grid_row = row
+        block.grid_col = col
+        label = tk.Label(content_frame, text=command_name, bg=color, fg="white",
+                         font=("Arial", 12, "bold"), anchor="w")
         label.pack(side="left", padx=5)
-
         input_vars = {}
         for label_text, var_name in inputs.items():
             tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
             input_var = tk.StringVar()
             tk.Entry(content_frame, textvariable=input_var, width=20).pack(side="left", padx=5)
             input_vars[var_name] = input_var
-
         block.input_vars = input_vars
-        block.grid_row = row
-        block.grid_col = col
-
         return block
-
 
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
-
-        # Start dragging a block
+        # Capture the offset inside the block where the user clicked
         self.drag_data["widget"] = block
+        self.drag_data["offset_x"] = event.x
+        self.drag_data["offset_y"] = event.y
         self.drag_data["row"] = block.grid_row
         self.drag_data["col"] = block.grid_col
-
-        # Temporarily free the current grid cell
+        # Free the grid cell since the block is being dragged
         self.grid_cells[block.grid_row][block.grid_col] = None
-
-        # Clear the highlight rectangle if it exists
         self.clear_highlight()
 
     def on_drag_motion(self, event, block):
-        # Handle motion of a dragged block
-        # Adjustments to account for consistent offset
-        fixed_offset_x = 260
-        fixed_offset_y = 80
-
-        # Calculate mouse position relative to the programming_area
-        x = (
-            self.programming_area.canvasx(event.x_root - self.frame.winfo_rootx())
-            - fixed_offset_x
-        )
-        y = (
-            self.programming_area.canvasy(event.y_root - self.frame.winfo_rooty())
-            - fixed_offset_y
-        )
-
-        # Constrain the cursor position within the grid
-        x = max(0, min(x, self.CELL_WIDTH - block.winfo_width()))
-        y = max(0, min(y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
-
-        # Move the block to follow the cursor with adjusted position
-        block.place(x=x, y=y)
-
-        # Determine the row under the cursor
-        target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
-
-        # Highlight the target row
+        # Compute new position relative to programming_area
+        prog_area_x = self.programming_area.winfo_rootx()
+        prog_area_y = self.programming_area.winfo_rooty()
+        new_x = event.x_root - prog_area_x - self.drag_data["offset_x"]
+        new_y = event.y_root - prog_area_y - self.drag_data["offset_y"]
+        new_x = max(0, min(new_x, self.CELL_WIDTH - block.winfo_width()))
+        new_y = max(0, min(new_y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+        block.place(x=new_x, y=new_y)
+        target_row = max(0, min(int(new_y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
         self.highlight_target_row(target_row)
 
     def highlight_target_row(self, target_row):
-        # Highlight the target row
-        if self.highlight_rect:
-            self.programming_area.coords(
-                self.highlight_rect,
-                0,
-                target_row * self.CELL_HEIGHT,
-                self.CELL_WIDTH,
-                (target_row + 1) * self.CELL_HEIGHT,
-            )
-        else:
-            self.highlight_rect = self.programming_area.create_rectangle(
-                0,
-                target_row * self.CELL_HEIGHT,
-                self.CELL_WIDTH,
-                (target_row + 1) * self.CELL_HEIGHT,
-                outline="blue",
-                width=2,
-                dash=(4, 2),
-            )
+        # Highlight by changing the background of the corresponding grid slot
+        for i, slot in enumerate(self.grid_slots):
+            if i == target_row:
+                slot.config(bg="lightblue")
+            else:
+                slot.config(bg="lightgray")
+
+    def clear_highlight(self):
+        for slot in self.grid_slots:
+            slot.config(bg="lightgray")
 
     def on_drop(self, event, block):
-        # Capture state only if a block was actually moved
-        if block and self.highlight_rect:
-            coords = self.programming_area.coords(self.highlight_rect)
-            target_row = int(coords[1] // self.CELL_HEIGHT)
-
-            # Move block into position
+        # When dropped, compute target row from block's current y position
+        if block:
+            y = block.winfo_y()
+            target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
             if self.grid_cells[target_row][0]:
                 self.move_blocks_down(target_row)
-
             block.grid_row = target_row
             block.grid_col = 0
             self.grid_cells[target_row][0] = block
             block.place(x=0, y=target_row * self.CELL_HEIGHT)
-
-            # Capture only if the position has changed
-            if block.grid_row != target_row:
-                new_state = self.capture_state()
-                if new_state and (
-                    not self.undo_list or self.undo_list[-1] != new_state
-                ):
-                    self.undo_list.append(new_state)
-                    self.redo_list.clear()
-
             self.update_command_list()
             self.move_blocks_up()
-
-        self.drag_data = {"widget": None, "row": None, "col": None}
+        self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
         self.clear_highlight()
 
     def move_blocks_down(self, start_row):
-        # Move all blocks from start_row down by one row
-        # Add a new row if needed
+        # Shift blocks downward starting from start_row
         if len(self.grid_cells) <= start_row:
-            self.add_row()
-
-        # Iterate from bottom to top, shifting blocks down
+            return
         for row in range(len(self.grid_cells) - 1, start_row, -1):
-            if self.grid_cells[row - 1][0]:  # Check if the row above has a block
+            if self.grid_cells[row - 1][0]:
                 block = self.grid_cells[row - 1][0]
-                self.grid_cells[row][0] = block  # Move the block down
-                self.grid_cells[row - 1][0] = None  # Clear the original cell
+                self.grid_cells[row][0] = block
+                self.grid_cells[row - 1][0] = None
                 block.grid_row = row
                 block.place(x=0, y=row * self.CELL_HEIGHT)
 
     def move_blocks_up(self):
-        # Move blocks up recursively to fill all empty rows
-        moved = False  # Flag to track if any block was moved
-
-        # Iterate through all rows except the last
-        for row in range(len(self.grid_cells) - 1):
-            if (
-                not self.grid_cells[row][0] and self.grid_cells[row + 1][0]
-            ):  # If current row is empty and next row has a block
-                # Move the block from the next row up
-                block = self.grid_cells[row + 1][0]
-                self.grid_cells[row][0] = block
-                self.grid_cells[row + 1][0] = None
-                block.grid_row = row
-                block.place(x=0, y=row * self.CELL_HEIGHT)
-                moved = True
-
-        # If a block was moved, call the method recursively
-        if moved:
-            self.move_blocks_up()
-
+        # Bubble blocks upward to fill empty rows
+        moved = True
+        while moved:
+            moved = False
+            for row in range(len(self.grid_cells) - 1):
+                if not self.grid_cells[row][0] and self.grid_cells[row + 1][0]:
+                    block = self.grid_cells[row + 1][0]
+                    self.grid_cells[row][0] = block
+                    self.grid_cells[row + 1][0] = None
+                    block.grid_row = row
+                    block.place(x=0, y=row * self.CELL_HEIGHT)
+                    moved = True
     def clear_highlight(self):
         # Remove the highlight rectangle
         if self.highlight_rect:
@@ -774,7 +679,6 @@ class PreProgrammingPage:
 
 
     def update_command_list(self):
-        # Update the list of commands
         self.command_list = [
             self.grid_cells[row][0]
             for row in range(len(self.grid_cells))

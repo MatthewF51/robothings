@@ -197,10 +197,8 @@ class PreProgrammingPage:
 
 
 
-    def create_block(self, command_label, row, col, command_module):
-
+    def create_block(self, command_label, command_module):
         command_name = command_label.cget("text").strip()
-
         if command_name not in command_module:
             print(f"ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}")
             return None
@@ -217,7 +215,7 @@ class PreProgrammingPage:
             height=self.CELL_HEIGHT,
         )
 
-        # Add event bindings for dragging
+        # 🔥 Apply event bindings to the entire block
         block.bind("<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk))
         block.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
         block.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
@@ -255,22 +253,20 @@ class PreProgrammingPage:
 
         return block
 
-
-
     def on_drag_start(self, event, block):
-        # Start dragging a block
+        # Start dragging a block without it jumping down
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
-        # Store the widget being dragged
+        # Store the original position of the block
         self.drag_data["widget"] = block
         self.drag_data["start_x"] = event.x
         self.drag_data["start_y"] = event.y
+        self.drag_data["orig_x"] = block.winfo_x()
+        self.drag_data["orig_y"] = block.winfo_y()
 
-        # Lift the block so it appears above others
+        # Ensure the block is lifted so it's on top of others
         block.lift()
-
-
 
 
     def on_drag_motion(self, event, block):

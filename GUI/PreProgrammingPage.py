@@ -688,19 +688,26 @@ class PreProgrammingPage:
         )
 
     def clear_programming_area(self):
-        # Clear all block widgets from each grid slot
-        for slot in self.grid_slots:
-            for widget in slot.winfo_children():
-                widget.destroy()
-        # Reset grid tracking data structures
+        # Destroy all widgets inside the programming_area (grid slots, blocks, etc.)
+        for widget in self.programming_area.winfo_children():
+            widget.destroy()
+
+        # Recreate grid slots
+        self.grid_slots = []
+        for i in range(self.visible_rows):
+            slot = tk.Frame(self.programming_area, bg="lightgray", height=self.CELL_HEIGHT)
+            slot.grid(row=i, column=0, sticky="ew", padx=5, pady=2)
+            self.grid_slots.append(slot)
+
+        # Reset internal tracking data structures
         self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
         self.command_list.clear()
         self.undo_list.clear()
         self.redo_list.clear()
         self.scroll_position = 0
-        # Refresh the visible area so the UI reflects the cleared state
-        self.refresh_visible_blocks()
+
         print("[clear_programming_area] Programming area cleared.")
+
 
 
     def add_row(self):

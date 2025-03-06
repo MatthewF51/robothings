@@ -221,13 +221,14 @@ class PreProgrammingPage:
         self.highlight_target_row(target_row)
 
     def highlight_target_row(self, target_row):
-        # Instead of a canvas rectangle, simply change the background of the target grid slot.
+        # Reset all slot backgrounds
         for i, slot in enumerate(self.grid_slots):
-            slot.config(bg="lightblue" if i == target_row else "lightgray")
-
-    def clear_highlight(self):
-        for slot in self.grid_slots:
             slot.config(bg="lightgray")
+
+        # Highlight only the chosen row
+        if 0 <= target_row < len(self.grid_slots):
+            self.grid_slots[target_row].config(bg="lightblue")
+
 
     def on_drop(self, event, block):
         if block:
@@ -272,10 +273,9 @@ class PreProgrammingPage:
                     moved = True
                     
     def clear_highlight(self):
-        # Remove the highlight rectangle
-        if self.highlight_rect:
-            self.programming_area.delete(self.highlight_rect)
-            self.highlight_rect = None
+        for slot in self.grid_slots:
+            slot.config(bg="lightgray")
+
 
     def handle_button_click(self, button_text):
         # Handles button clicks and logs actions

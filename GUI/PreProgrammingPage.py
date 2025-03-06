@@ -301,6 +301,7 @@ class PreProgrammingPage:
                     moved = True
         print("[move_blocks_up] Completed upward shift.")
         self.update_command_list()
+        self.refresh_visible_blocks()
 
     def handle_button_click(self, button_text):
         # Handles button clicks and logs actions

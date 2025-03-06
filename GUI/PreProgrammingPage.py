@@ -197,8 +197,9 @@ class PreProgrammingPage:
 
 
 
-    def create_block(self, command_label, command_module):
+    def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()
+
         if command_name not in command_module:
             print(f"ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}")
             return None
@@ -215,7 +216,7 @@ class PreProgrammingPage:
             height=self.CELL_HEIGHT,
         )
 
-        # 🔥 Apply event bindings to the entire block
+        # Add event bindings for dragging
         block.bind("<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk))
         block.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
         block.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
@@ -225,6 +226,8 @@ class PreProgrammingPage:
 
         block.command_name = command_name
         block.command_module = command_module  # Store module reference
+        block.grid_row = row  # Assign row
+        block.grid_col = col  # Assign column
 
         label = tk.Label(
             content_frame,
@@ -723,20 +726,22 @@ class PreProgrammingPage:
         )
 
     def clear_programming_area(self):
-        # Clear all blocks from the UI
+        # Clears all blocks from the programming area and resets tracking
+        # Remove all block widgets from the UI
         for slot in self.grid_slots:
             for widget in slot.winfo_children():
                 widget.destroy()
 
-        # Reset all internal state tracking blocks
+        # Reset internal tracking
         self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
         self.command_list.clear()
         self.undo_list.clear()
         self.redo_list.clear()
 
-        # Reset scroll position and refresh UI
+        # Reset scroll position and update UI
         self.scroll_position = 0
         self.refresh_visible_blocks()
+
 
 
 

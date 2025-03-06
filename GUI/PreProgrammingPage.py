@@ -564,7 +564,7 @@ class PreProgrammingPage:
                         continue
                     command_name = parts[0]
                     module_name = parts[1]
-                    # Build inputs dictionary, ignoring empty key-value pairs.
+                    # Build the inputs dictionary (ignoring empty parts)
                     inputs = {}
                     for kv in parts[2:]:
                         if kv and "=" in kv:
@@ -576,41 +576,46 @@ class PreProgrammingPage:
                     if module_name not in modules_commands:
                         print(f"[load_program] ERROR: Module '{module_name}' not found!")
                         continue
-
+                    
                     command_module = modules_commands[module_name]["commands"]
                     if command_name not in command_module:
                         print(f"[load_program] ERROR: Command '{command_name}' not found in '{module_name}'!")
                         continue
-
+                    
                     expected_inputs = command_module[command_name].get("inputs", {})
-
-                    # Create block using updated create_block_from_data (passing module_name)
+                    
+                    # Create the block using the updated create_block_from_data method
                     block = self.create_block_from_data(command_name, expected_inputs, inputs, module_name)
                     if block is None:
                         continue
-
-                    # Place the block into the first available row
+                    
+                    # Find the first available row in grid_cells.
                     placed = False
                     for r in range(len(self.grid_cells)):
-                        if not self.grid_cells[r][0]:
+                        if self.grid_cells[r][0] is None:
                             block.grid_row = r
                             block.grid_col = 0
                             block.place(x=0, y=r * self.CELL_HEIGHT)
                             self.grid_cells[r][0] = block
                             placed = True
+                            print(f"[load_program] Placed block '{command_name}' in row {r}")
                             break
                     if not placed:
+                        # If all rows are occupied, add a new row.
                         self.add_row()
                         r = len(self.grid_cells) - 1
                         block.grid_row = r
                         block.grid_col = 0
                         block.place(x=0, y=r * self.CELL_HEIGHT)
                         self.grid_cells[r][0] = block
-
+                        print(f"[load_program] Placed block '{command_name}' in new row {r}")
+                    
                     self.command_list.append(block)
-                    print(f"[load_program] Placed block '{command_name}' in row {block.grid_row}")
+                    print(f"[load_program] Appended block '{command_name}' to command_list.")
+            # After processing all lines, adjust the UI.
             self.move_blocks_up()
             self.refresh_visible_blocks()
+            self.update_command_list()
             messagebox.showinfo("Load Success", f"Program '{file_name}.txt' loaded successfully.")
             print(f"[load_program] Loaded program from {file_path}")
         except FileNotFoundError:
@@ -709,31 +714,26 @@ class PreProgrammingPage:
         self.redo_list.clear()
 
     def create_block_from_data(self, command_name, expected_inputs, input_values, module_name):
-        # Get the color for the module. Update self.module_colors if needed.
+        # Obtain the correct color for the module.
         modules_commands = load_modules()
         color = "#FF5733"  # Default color
         if module_name in modules_commands:
             color = modules_commands[module_name]["color"]
             self.module_colors[module_name] = color
-
-        row = len(self.command_list)  # New block goes at the end of command_list
+        # Set the row to be the current length of the command_list.
+        row = len(self.command_list)
         col = 0
         block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2,
                         width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
         block.place(x=col * self.CELL_WIDTH, y=row * self.CELL_HEIGHT)
-
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
         label = tk.Label(content_frame, text=command_name, bg=color, fg="white",
                         font=("Arial", 12, "bold"), anchor="w")
         label.pack(side="left", padx=5)
         block.command_label = label
-
-        # Store the module name for later use (save/load)
         block.command_name = command_name
-        block.command_module_name = module_name
-
+        block.command_module_name = module_name  # Store module name for saving
         input_vars = {}
         for label_text, var_name in expected_inputs.items():
             tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
@@ -741,11 +741,9 @@ class PreProgrammingPage:
             tk.Entry(content_frame, textvariable=input_var, width=8).pack(side="left", padx=5)
             input_vars[var_name] = input_var
         block.input_vars = input_vars
-
         block.grid_row = row
         block.grid_col = col
         return block
-
 
     def create_command_label(self, command_name):
         # Helper to create a dummy label for loading commands.

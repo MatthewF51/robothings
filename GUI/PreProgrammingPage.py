@@ -550,33 +550,39 @@ class PreProgrammingPage:
 
     def load_program(self, file_name):
         try:
-            self.clear_programming_area()
+            self.clear_programming_area()  # Clear previous blocks
             file_path = os.path.join("SavedFiles", f"{file_name}.txt")
             with open(file_path, "r") as file:
                 for line in file:
                     line = line.strip()
                     if not line:
                         continue
+                    # Parse the saved line: command_name;module_name;key=value;key=value;...
                     parts = line.split(";")
                     command_name = parts[0]
                     module_name = parts[1]
                     inputs = {kv.split("=")[0]: kv.split("=")[1] for kv in parts[2:]}
+                    
+                    # Reload modules and check if the saved module exists
                     modules_commands = load_modules()
                     if module_name not in modules_commands:
-                        print(
-                            f"[load_program] ERROR: Module '{module_name}' not found!"
-                        )
+                        print(f"[load_program] ERROR: Module '{module_name}' not found!")
                         continue
+                    
                     command_module = modules_commands[module_name]["commands"]
                     if command_name not in command_module:
-                        print(
-                            f"[load_program] ERROR: Command '{command_name}' not found in '{module_name}'!"
-                        )
+                        print(f"[load_program] ERROR: Command '{command_name}' not found in '{module_name}'!")
                         continue
-                    block = self.create_block_from_data(
-                        command_name, command_module, inputs
-                    )
-                    # Find first empty row
+
+                    # Get expected inputs for this command.
+                    expected_inputs = command_module[command_name].get("inputs", {})
+
+                    # Create the block using the new layout (pass module_name).
+                    block = self.create_block_from_data(command_name, expected_inputs, inputs, module_name)
+                    if block is None:
+                        continue
+
+                    # Place the block into the first available row.
                     placed = False
                     for r in range(len(self.grid_cells)):
                         if not self.grid_cells[r][0]:
@@ -587,18 +593,20 @@ class PreProgrammingPage:
                             placed = True
                             break
                     if not placed:
+                        # If no empty row is found, add a new row.
                         self.add_row()
                         r = len(self.grid_cells) - 1
                         block.grid_row = r
                         block.grid_col = 0
                         block.place(x=0, y=r * self.CELL_HEIGHT)
                         self.grid_cells[r][0] = block
+                    
                     self.command_list.append(block)
+                    print(f"[load_program] Loaded block '{command_name}' from module '{module_name}' into row {block.grid_row}")
+                    
             self.move_blocks_up()
             self.refresh_visible_blocks()
-            messagebox.showinfo(
-                "Load Success", f"Program '{file_name}.txt' loaded successfully."
-            )
+            messagebox.showinfo("Load Success", f"Program '{file_name}.txt' loaded successfully.")
             print(f"[load_program] Loaded program from {file_path}")
         except FileNotFoundError:
             messagebox.showerror("Load Error", f"File '{file_name}.txt' not found.")

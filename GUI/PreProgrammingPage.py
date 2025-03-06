@@ -614,6 +614,7 @@ class PreProgrammingPage:
             self.move_blocks_up()
             self.refresh_visible_blocks()
             self.update_command_list()
+            self.move_blocks_up()
             messagebox.showinfo("Load Success", f"Program '{file_name}.txt' loaded successfully.")
             print(f"[load_program] Loaded program from {file_path}")
         except FileNotFoundError:
@@ -628,9 +629,7 @@ class PreProgrammingPage:
             messagebox.showinfo("Undo", "Nothing to undo")
             return
         current_state = self.capture_state()
-        if current_state and (
-            not self.redo_list or self.redo_list[-1] != current_state
-        ):
+        if current_state is not None:
             self.redo_list.append(current_state)
         last_state = self.undo_list.pop()
         print("[undo_last_action] Restoring state:", last_state)
@@ -641,71 +640,63 @@ class PreProgrammingPage:
             messagebox.showinfo("Redo", "Nothing to redo")
             return
         current_state = self.capture_state()
-        if current_state and (
-            not self.undo_list or self.undo_list[-1] != current_state
-        ):
+        if current_state is not None:
             self.undo_list.append(current_state)
         last_state = self.redo_list.pop()
         print("[redo_last_action] Restoring state:", last_state)
         self.restore_state(last_state)
 
     def capture_state(self):
-        """Captures the current state as a list of tuples: (command_name, module_name, inputs, row_index)"""
+        """
+        Capture the current state as a list of tuples:
+        (command_name, command_module_name, inputs, row_index)
+        """
         state = []
-        for i, block in enumerate(self.command_list):
-            # Skip any destroyed block
-            if not block.winfo_exists():
-                continue
-            command_name = block.command_name
-            # You may have stored the module name in block.command_module_name if desired.
-            command_module_name = getattr(block, "command_module_name", "Unknown")
-            inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
-            state.append((command_name, command_module_name, inputs, i))
+        # Iterate through grid_cells rows.
+        for row in range(len(self.grid_cells)):
+            block = self.grid_cells[row][0]
+            if block is not None and block.winfo_exists():
+                command_name = block.command_name
+                command_module_name = getattr(block, "command_module_name", "Unknown")
+                inputs = {k: v.get() for k, v in block.input_vars.items()}
+                state.append((command_name, command_module_name, inputs, row))
         print("[capture_state] Captured state:", state)
-        return state if not self.undo_list or self.undo_list[-1] != state else None
+        return state
 
     def restore_state(self, state):
-        """Restores the programming area from a captured state."""
+        """
+        Restore a previously captured state.
+        Clears the programming area and re-creates blocks in their saved order.
+        """
         print("[restore_state] Restoring state:", state)
-        # Clear current UI completely
+        # Clear the programming area completely.
         self.clear_programming_area()
-        # Reload modules in case things have changed
         modules_commands = load_modules()
-        for command_name, module_name, inputs, row in state:
+        for (command_name, module_name, inputs, row) in state:
             if module_name not in modules_commands:
-                print(f"[restore_state] ERROR: Module '{module_name}' not found!")
+                print(f"[restore_state] ERROR: Module '{module_name}' not found.")
                 continue
             command_module = modules_commands[module_name]["commands"]
             if command_name not in command_module:
-                print(
-                    f"[restore_state] ERROR: Command '{command_name}' not found in '{module_name}'!"
-                )
+                print(f"[restore_state] ERROR: Command '{command_name}' not found in module '{module_name}'.")
                 continue
-            # Create a block from stored data.
-            block = self.create_block_from_data(command_name, command_module, inputs)
+            expected_inputs = command_module[command_name].get("inputs", {})
+            # Create block using updated create_block_from_data (now with command_module)
+            block = self.create_block_from_data(command_name, expected_inputs, inputs, module_name, command_module)
             if block is None:
                 continue
-            # Find the first empty row (or append a row if needed)
-            placed = False
-            for r in range(len(self.grid_cells)):
-                if not self.grid_cells[r][0]:
-                    block.grid_row = r
-                    block.grid_col = 0
-                    block.place(x=0, y=r * self.CELL_HEIGHT)
-                    self.grid_cells[r][0] = block
-                    placed = True
-                    break
-            if not placed:
+            # Ensure grid_cells has enough rows.
+            while row >= len(self.grid_cells):
                 self.add_row()
-                r = len(self.grid_cells) - 1
-                block.grid_row = r
-                block.grid_col = 0
-                block.place(x=0, y=r * self.CELL_HEIGHT)
-                self.grid_cells[r][0] = block
+            block.grid_row = row
+            block.grid_col = 0
+            block.place(x=0, y=row * self.CELL_HEIGHT)
+            self.grid_cells[row][0] = block
             self.command_list.append(block)
+            print(f"[restore_state] Restored block '{command_name}' in row {row}")
         self.refresh_visible_blocks()
-        print("[restore_state] New command_list:", self.command_list)
-
+        print("[restore_state] State restored. New command_list:", self.command_list)
+        
     def capture_input_change(self):
         # Capture state when a user modifies an input field
         self.undo_list.append(self.capture_state())

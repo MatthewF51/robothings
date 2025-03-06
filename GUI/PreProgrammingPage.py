@@ -707,9 +707,13 @@ class PreProgrammingPage:
 
 
     def update_command_list(self):
-        self.command_list = [
-            self.grid_cells[row][0]
-            for row in range(len(self.grid_cells))
-            if self.grid_cells[row][0]
-        ]
+        # Sort the command_list by the block's current vertical position (y coordinate)
+        sorted_blocks = sorted(self.command_list, key=lambda block: block.winfo_y())
+        # Clear grid_cells and reassign blocks row-by-row
+        self.grid_cells = [[None] for _ in range(self.GRID_ROWS)]
+        for i, block in enumerate(sorted_blocks):
+            block.grid_row = i
+            self.grid_cells[i][0] = block
+            block.place(x=0, y=i * self.CELL_HEIGHT)
+        self.command_list = sorted_blocks
         print("[update_command_list] Command list updated:", self.command_list)

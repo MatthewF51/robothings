@@ -197,7 +197,8 @@ class PreProgrammingPage:
 
 
 
-    def create_block(self, command_label, command_module):
+    def create_block(self, command_label, row, col, command_module):
+
         command_name = command_label.cget("text").strip()
 
         if command_name not in command_module:

@@ -197,15 +197,16 @@ class PreProgrammingPage:
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
-        # Capture the offset within the block
         self.drag_data["widget"] = block
-        self.drag_data["offset_x"] = event.x
-        self.drag_data["offset_y"] = event.y
+        # Compute offset using absolute screen coordinates:
+        self.drag_data["offset_x"] = event.x_root - block.winfo_rootx()
+        self.drag_data["offset_y"] = event.y_root - block.winfo_rooty()
         self.drag_data["row"] = block.grid_row
         self.drag_data["col"] = block.grid_col
-        # Free the grid cell since the block is being dragged
+        # Free the grid cell as the block is now being dragged
         self.grid_cells[block.grid_row][block.grid_col] = None
         self.clear_highlight()
+
 
     def on_drag_motion(self, event, block):
         # Compute new position relative to programming_area

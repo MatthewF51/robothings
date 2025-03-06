@@ -185,7 +185,10 @@ class PreProgrammingPage:
         inputs = command_module[command_name].get("inputs", {})
         color = command_label.cget("bg")
         block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2,
-                         width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
+                        width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
+        # Store the original background so we can restore it after highlighting.
+        block.original_bg = color
+
         # Create a content frame inside the block
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
@@ -194,7 +197,7 @@ class PreProgrammingPage:
         block.grid_row = row
         block.grid_col = col
         label = tk.Label(content_frame, text=command_name, bg=color, fg="white",
-                         font=("Arial", 12, "bold"), anchor="w")
+                        font=("Arial", 12, "bold"), anchor="w")
         label.pack(side="left", padx=5)
         input_vars = {}
         for label_text, var_name in inputs.items():
@@ -204,7 +207,7 @@ class PreProgrammingPage:
             input_vars[var_name] = input_var
         block.input_vars = input_vars
 
-        # Add drag event bindings to both block and its content_frame
+        # Bind drag events to both block and its content_frame
         block.bind("<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk))
         block.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
         block.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
@@ -213,6 +216,8 @@ class PreProgrammingPage:
         content_frame.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
 
         return block
+
+
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
@@ -240,14 +245,38 @@ class PreProgrammingPage:
         self.highlight_target_row(target_row)
 
     def highlight_target_row(self, target_row):
+        # First, clear any existing highlight on all grid slots and blocks.
         for i, slot in enumerate(self.grid_slots):
-            slot.config(bg="lightblue" if i == target_row else "lightgray")
+            slot.config(bg="lightgray")
+            if self.grid_cells[i][0]:
+                block = self.grid_cells[i][0]
+                block.config(bg=block.original_bg)
+                # Also restore the content frame's background if available.
+                if block.winfo_children():
+                    block.winfo_children()[0].config(bg=block.original_bg)
+        # Now highlight the target row.
+        if 0 <= target_row < len(self.grid_slots):
+            if self.grid_cells[target_row][0]:
+                block = self.grid_cells[target_row][0]
+                # Temporarily darken the block's background.
+                block.config(bg="darkgray")
+                if block.winfo_children():
+                    block.winfo_children()[0].config(bg="darkgray")
+            else:
+                # No block exists in that row; highlight the grid slot.
+                self.grid_slots[target_row].config(bg="lightblue")
         print(f"[highlight_target_row] Highlighting row {target_row}")
 
     def clear_highlight(self):
-        for slot in self.grid_slots:
+        for i, slot in enumerate(self.grid_slots):
             slot.config(bg="lightgray")
+            if self.grid_cells[i][0]:
+                block = self.grid_cells[i][0]
+                block.config(bg=block.original_bg)
+                if block.winfo_children():
+                    block.winfo_children()[0].config(bg=block.original_bg)
         print("[clear_highlight] Cleared highlights.")
+
 
     def on_drop(self, event, block):
         if block:

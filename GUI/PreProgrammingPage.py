@@ -231,27 +231,49 @@ class PreProgrammingPage:
 
 
     def on_drop(self, event, block):
-        if block:
-            y = block.winfo_y()
-            target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
-            # If target row is occupied, move blocks down
-            if self.grid_cells[target_row][0]:
-                self.move_blocks_down(target_row)
-            block.grid_row = target_row
-            block.grid_col = 0
-            self.grid_cells[target_row][0] = block
-            block.place(x=0, y=target_row * self.CELL_HEIGHT)
-            self.update_command_list()
-            self.move_blocks_up()
+        """
+        Called when the user releases the mouse after dragging a block.
+        """
+        if not block:
+            return
+
+        # 1. Determine the target row from the block's y-position
+        y = block.winfo_y()
+        target_row = max(0, min(y // self.CELL_HEIGHT, self.GRID_ROWS - 1))
+
+        # 2. If the target row is occupied, shift everything down from that row
+        if self.grid_cells[target_row][0]:
+            self.move_blocks_down(target_row)
+
+        # 3. Place the block in the newly freed row
+        block.grid_row = target_row
+        block.grid_col = 0
+        self.grid_cells[target_row][0] = block
+        block.place(x=0, y=target_row * self.CELL_HEIGHT)
+
+        # 4. Update the command list so it reflects the new arrangement
+        self.update_command_list()
+
+        # 5. Remove any gaps above (bubble blocks up)
+        self.move_blocks_up()
+
+        # 6. Reset drag data and highlight
         self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
         self.clear_highlight()
 
     def move_blocks_down(self, start_row):
-        # Shift blocks downward from start_row (if needed)
-        if len(self.grid_cells) <= start_row:
-            return
+        """
+        Shifts all blocks from 'start_row' downward by one row, making space.
+        If the last row is full, adds a new row at the bottom.
+        """
+        # If the very last row is also occupied, add a new row at the bottom
+        if self.grid_cells[-1][0] is not None:
+            self.grid_cells.append([None for _ in range(self.GRID_COLS)])
+            self.GRID_ROWS += 1  # If you are tracking total rows
+
+        # Shift from bottom to top
         for row in range(len(self.grid_cells) - 1, start_row, -1):
-            if self.grid_cells[row - 1][0]:
+            if self.grid_cells[row - 1][0]:  # There's a block above
                 block = self.grid_cells[row - 1][0]
                 self.grid_cells[row][0] = block
                 self.grid_cells[row - 1][0] = None
@@ -259,18 +281,23 @@ class PreProgrammingPage:
                 block.place(x=0, y=row * self.CELL_HEIGHT)
 
     def move_blocks_up(self):
-        # Bubble blocks upward to fill empty rows
+        """
+        Recursively bubbles blocks upward to fill any empty rows.
+        """
         moved = True
         while moved:
             moved = False
+            # Iterate all rows except the last
             for row in range(len(self.grid_cells) - 1):
                 if not self.grid_cells[row][0] and self.grid_cells[row + 1][0]:
+                    # Current row is empty, next row has a block => move it up
                     block = self.grid_cells[row + 1][0]
                     self.grid_cells[row][0] = block
                     self.grid_cells[row + 1][0] = None
                     block.grid_row = row
                     block.place(x=0, y=row * self.CELL_HEIGHT)
                     moved = True
+
                     
     def clear_highlight(self):
         for slot in self.grid_slots:

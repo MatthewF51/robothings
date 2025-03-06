@@ -15,7 +15,6 @@ class PreProgrammingPage:
     CELL_WIDTH = 750
 
     def __init__(self, container, controller):
-        # Initialize the pre-programming page
         self.frame = tk.Frame(container, bg="white")
         self.controller = controller
 
@@ -139,10 +138,10 @@ class PreProgrammingPage:
 
     def populate_command_section(self, command_frame):
         modules_commands = load_modules()  # Load all available modules
-
         for module_name, module_data in modules_commands.items():
             commands = module_data["commands"]
             color = module_data["color"]
+
             module_label = tk.Label(
                 command_frame, text=module_name, font=("Arial", 10, "bold")
             )
@@ -181,7 +180,7 @@ class PreProgrammingPage:
     def create_block(self, command_label, row, col, command_module, module_name):
         command_name = command_label.cget("text").strip()
         if command_name not in command_module:
-            print(f"ERROR: '{command_name}' not found in module. Available: {list(command_module.keys())}")
+            print(f"ERROR: '{command_name}' not in {list(command_module.keys())}")
             return None
 
         inputs = command_module[command_name].get("inputs", {})
@@ -201,11 +200,10 @@ class PreProgrammingPage:
         block.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
         block.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
 
-        # Content frame
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # Also bind drag events to the content_frame
+        # Bind drag events to content_frame too
         content_frame.bind("<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk))
         content_frame.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
         content_frame.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
@@ -256,12 +254,10 @@ class PreProgrammingPage:
         new_x = max(0, min(new_x, self.CELL_WIDTH - block.winfo_width()))
         new_y = max(0, min(new_y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
 
-        # Check if block still exists (avoid TclError)
         if not block.winfo_exists():
             return
 
         block.place(x=new_x, y=new_y)
-
         target_row = max(0, min(int(new_y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
         self.highlight_target_row(target_row)
 
@@ -276,10 +272,10 @@ class PreProgrammingPage:
             slot.configure(bg="lightgray")
 
     def clear_rows_above(self, target_row):
+        """Destroys all blocks in rows < target_row."""
         for r in range(target_row):
             if self.grid_cells[r][0] is not None:
                 block_to_clear = self.grid_cells[r][0]
-                # Destroy it so it can't be placed again
                 block_to_clear.destroy()
                 self.grid_cells[r][0] = None
                 if block_to_clear in self.command_list:
@@ -292,30 +288,36 @@ class PreProgrammingPage:
         y = block.winfo_y()
         target_row = max(0, min(y // self.CELL_HEIGHT, self.GRID_ROWS - 1))
 
+        # Clear all blocks above target_row
         self.clear_rows_above(target_row)
 
-        # If the target row is occupied, shift blocks down
+        # If target row is occupied, shift them down
         if self.grid_cells[target_row][0] is not None:
             self.move_blocks_down(target_row)
 
-        # Place the block
+        # Place the block in the target row
         block.grid_row = target_row
         block.grid_col = 0
         self.grid_cells[target_row][0] = block
 
-        # Double-check existence
         if block.winfo_exists():
             block.place(x=0, y=target_row * self.CELL_HEIGHT)
 
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
+        # Bubble up any blocks if there are empty rows
         self.move_blocks_up()
-        self.clear_highlight()
 
+        # Clear highlight and reset drag data
+        self.clear_highlight()
         self.drag_data = {"widget": None, "row": None, "col": None}
 
+        # **Refresh** so user sees final arrangement
+        self.refresh_visible_blocks()
+
     def move_blocks_down(self, start_row):
+        """Makes space at start_row by shifting blocks downward."""
         if len(self.grid_cells) <= start_row:
             return
 
@@ -326,21 +328,19 @@ class PreProgrammingPage:
         for row in range(len(self.grid_cells) - 1, start_row, -1):
             if self.grid_cells[row - 1][0]:
                 block = self.grid_cells[row - 1][0]
-                # Skip if destroyed
                 if not block.winfo_exists():
                     self.grid_cells[row - 1][0] = None
                     continue
-
                 self.grid_cells[row][0] = block
                 self.grid_cells[row - 1][0] = None
                 block.grid_row = row
-
                 if block.winfo_exists():
                     block.place(x=0, y=row * self.CELL_HEIGHT)
 
         self.check_and_add_rows()
 
     def move_blocks_up(self):
+        """Removes empty rows by bubbling blocks upward."""
         moved = True
         while moved:
             moved = False
@@ -348,17 +348,15 @@ class PreProgrammingPage:
                 top_block = self.grid_cells[row][0]
                 below_block = self.grid_cells[row + 1][0]
 
-                # If current row is empty but the next row has a valid block, move it up
+                # If current row is empty but next row has a valid block, move it up
                 if top_block is None and below_block:
                     if not below_block.winfo_exists():
-                        # If the block is destroyed, just remove reference
                         self.grid_cells[row + 1][0] = None
                         continue
 
                     self.grid_cells[row][0] = below_block
                     self.grid_cells[row + 1][0] = None
                     below_block.grid_row = row
-
                     if below_block.winfo_exists():
                         below_block.place(x=0, y=row * self.CELL_HEIGHT)
                     moved = True
@@ -424,7 +422,6 @@ class PreProgrammingPage:
                         target=command_function, args=tuple(inputs.values()), daemon=True
                     ).start()
                 else:
-                    start_time = time.time()
                     command_function(*inputs.values())
                     execution_time = self.estimate_execution_time(command_name, inputs)
                     time.sleep(execution_time)
@@ -453,6 +450,8 @@ class PreProgrammingPage:
         try:
             with open(file_path, "w") as file:
                 for block in self.command_list:
+                    if not block.winfo_exists():
+                        continue
                     command_name = block.command_name
                     module_name = getattr(block, "command_module_name", "Unknown")
                     inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
@@ -487,6 +486,7 @@ class PreProgrammingPage:
                         continue
 
                     block = self.create_block_from_data(command_name, command_module, inputs, module_name)
+                    # Find first empty row
                     for row in range(len(self.grid_cells)):
                         if not self.grid_cells[row][0]:
                             block.grid_row = row
@@ -526,7 +526,7 @@ class PreProgrammingPage:
         state = []
         for i, block in enumerate(self.command_list):
             if not block.winfo_exists():
-                continue  # Skip destroyed blocks
+                continue
             command_name = block.command_name
             command_module_name = getattr(block, "command_module_name", "Unknown")
             inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
@@ -558,6 +558,7 @@ class PreProgrammingPage:
                 block.place(x=0, y=row * self.CELL_HEIGHT)
             self.command_list.append(block)
         self.move_blocks_up()
+        self.refresh_visible_blocks()
 
     def create_block_from_data(self, command_name, expected_inputs, input_values, module_name):
         color = self.module_colors.get(command_name.split()[0], "#FF5733")
@@ -602,10 +603,14 @@ class PreProgrammingPage:
         return block
 
     def clear_programming_area(self):
-        for slot in self.grid_slots:
-            for widget in slot.winfo_children():
-                widget.destroy()
-        self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
+        """Destroy all blocks from the entire programming_area, then reset structures."""
+        # Destroy everything inside the programming_area (not just the visible rows)
+        for widget in self.programming_area.winfo_children():
+            widget.destroy()
+
+        self.grid_cells = [
+            [None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)
+        ]
         self.command_list.clear()
         self.undo_list.clear()
         self.redo_list.clear()
@@ -613,7 +618,6 @@ class PreProgrammingPage:
         self.refresh_visible_blocks()
 
     def add_row(self):
-        # If you need dynamic row-adding logic, you can expand it here.
         self.grid_cells.append([None for _ in range(self.GRID_COLS)])
 
     def check_and_add_rows(self):
@@ -632,15 +636,16 @@ class PreProgrammingPage:
             self.refresh_visible_blocks()
 
     def refresh_visible_blocks(self):
+        # Clear current display
         for slot in self.grid_slots:
             for widget in slot.winfo_children():
                 widget.destroy()
 
+        # Populate visible slots
         for i in range(self.visible_rows):
             row_index = self.scroll_position + i
             if row_index < len(self.command_list):
                 block = self.command_list[row_index]
-                # If the block is destroyed, skip it
                 if not block.winfo_exists():
                     continue
                 block.grid_row = i

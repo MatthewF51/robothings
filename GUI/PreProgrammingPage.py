@@ -35,6 +35,8 @@ class PreProgrammingPage:
         self.scroll_position = 0  # Current scroll index
 
         self.module_colors = {}
+        
+        self.last_highlighted_row = None
 
         self.setup_ui()
 
@@ -186,7 +188,7 @@ class PreProgrammingPage:
         color = command_label.cget("bg")
         block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2,
                         width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
-        # Store the original background so we can restore it after highlighting.
+        # Store original background color to restore after highlighting.
         block.original_bg = color
 
         # Create a content frame inside the block
@@ -218,6 +220,7 @@ class PreProgrammingPage:
         return block
 
 
+
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
@@ -245,29 +248,33 @@ class PreProgrammingPage:
         self.highlight_target_row(target_row)
 
     def highlight_target_row(self, target_row):
-        # First, clear any existing highlight on all grid slots and blocks.
+        # Only update if the target row has changed.
+        if self.last_highlighted_row == target_row:
+            return
+        self.last_highlighted_row = target_row
+
+        # Reset all slots and blocks
         for i, slot in enumerate(self.grid_slots):
             slot.config(bg="lightgray")
             if self.grid_cells[i][0]:
                 block = self.grid_cells[i][0]
                 block.config(bg=block.original_bg)
-                # Also restore the content frame's background if available.
                 if block.winfo_children():
                     block.winfo_children()[0].config(bg=block.original_bg)
-        # Now highlight the target row.
+        # Now update the target row
         if 0 <= target_row < len(self.grid_slots):
             if self.grid_cells[target_row][0]:
                 block = self.grid_cells[target_row][0]
-                # Temporarily darken the block's background.
                 block.config(bg="darkgray")
                 if block.winfo_children():
                     block.winfo_children()[0].config(bg="darkgray")
             else:
-                # No block exists in that row; highlight the grid slot.
                 self.grid_slots[target_row].config(bg="lightblue")
         print(f"[highlight_target_row] Highlighting row {target_row}")
 
     def clear_highlight(self):
+        # Reset last highlighted row and UI elements
+        self.last_highlighted_row = None
         for i, slot in enumerate(self.grid_slots):
             slot.config(bg="lightgray")
             if self.grid_cells[i][0]:

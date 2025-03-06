@@ -273,20 +273,20 @@ class PreProgrammingPage:
 
 
     def on_drag_motion(self, event, block):
-        # Move the block with the cursor while dragging
         if not self.drag_data["widget"]:
-            return  # Prevent errors if dragging isn't started properly
+            return  # Prevent errors if dragging isn't started
 
-        # Calculate movement
-        dx = event.x - self.drag_data["start_x"]
-        dy = event.y - self.drag_data["start_y"]
+        # Get cursor position relative to `programming_area`
+        x = self.programming_area.winfo_pointerx() - self.programming_area.winfo_rootx()
+        y = self.programming_area.winfo_pointery() - self.programming_area.winfo_rooty()
 
-        # Move the block
-        block.place(x=block.winfo_x() + dx, y=block.winfo_y() + dy)
+        # Ensure movement stays within programming area bounds
+        x = max(0, min(x, self.CELL_WIDTH - block.winfo_width()))
+        y = max(0, min(y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
 
-        # Update drag start position
-        self.drag_data["start_x"] = event.x
-        self.drag_data["start_y"] = event.y
+        # Move the block to follow the cursor exactly
+        block.place(x=x, y=y)
+
 
 
     def highlight_target_row(self, target_row):
@@ -356,25 +356,26 @@ class PreProgrammingPage:
                 block.place(x=0, y=row * self.CELL_HEIGHT)
 
     def move_blocks_up(self):
-        # Move blocks up recursively to fill all empty rows
-        moved = False  # Flag to track if any block was moved
+        # Ensures all blocks are moved upwards to fill empty rows
+        new_command_list = []
 
-        # Iterate through all rows except the last
-        for row in range(len(self.grid_cells) - 1):
-            if (
-                not self.grid_cells[row][0] and self.grid_cells[row + 1][0]
-            ):  # If current row is empty and next row has a block
-                # Move the block from the next row up
-                block = self.grid_cells[row + 1][0]
-                self.grid_cells[row][0] = block
-                self.grid_cells[row + 1][0] = None
-                block.grid_row = row
-                block.place(x=0, y=row * self.CELL_HEIGHT)
-                moved = True
+        # Gather all blocks, remove None values
+        for row in range(len(self.grid_cells)):
+            if self.grid_cells[row][0]:  # If there's a block
+                new_command_list.append(self.grid_cells[row][0])
 
-        # If a block was moved, call the method recursively
-        if moved:
-            self.move_blocks_up()
+        # Clear the grid tracking
+        self.grid_cells = [[None] for _ in range(self.GRID_ROWS)]
+
+        # Reassign blocks from top down
+        for i, block in enumerate(new_command_list):
+            block.grid_row = i  # Assign new row
+            self.grid_cells[i][0] = block  # Store in grid
+            block.place(x=0, y=i * self.CELL_HEIGHT)  # Move visually
+
+        # Update command list
+        self.command_list = new_command_list
+
 
     def clear_highlight(self):
         # Remove the highlight rectangle

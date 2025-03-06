@@ -19,7 +19,7 @@ class PreProgrammingPage:
         self.frame = tk.Frame(container, bg="white")
         self.controller = controller
 
-        # Drag-and-drop tracking
+        # Drag-and-drop tracking (added offset values)
         self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
 
         # Grid tracking
@@ -48,9 +48,7 @@ class PreProgrammingPage:
         self.command_section = tk.LabelFrame(
             self.frame, text="Commands", bg="white", font=("Arial", 10, "bold")
         )
-        self.command_section.grid(
-            row=0, column=0, rowspan=2, sticky="nsew", padx=5, pady=5
-        )
+        self.command_section.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=5, pady=5)
         self.populate_command_section(self.command_section)
 
         # Middle frame (Programming area)
@@ -84,9 +82,7 @@ class PreProgrammingPage:
             ).pack(side="left", padx=10, pady=5)
 
         # File name input
-        tk.Label(box_b, text="File Name:", bg="white", font=("Arial", 10)).pack(
-            side="left", padx=5
-        )
+        tk.Label(box_b, text="File Name:", bg="white", font=("Arial", 10)).pack(side="left", padx=5)
         self.file_name_entry = tk.Entry(box_b, width=20, font=("Arial", 10))
         self.file_name_entry.pack(side="left", padx=10)
         self.file_name_entry.insert(0, "program")  # Default file name
@@ -112,9 +108,7 @@ class PreProgrammingPage:
         tk.Button(scroll_controls, text="⬇ Scroll Down", command=self.scroll_down).pack(side="right", expand=True)
 
         # Box D: Log Area
-        self.log_section = tk.LabelFrame(
-            self.frame, text="Action Log", bg="white", font=("Arial", 10, "bold")
-        )
+        self.log_section = tk.LabelFrame(self.frame, text="Action Log", bg="white", font=("Arial", 10, "bold"))
         self.log_section.grid(row=0, column=2, rowspan=2, sticky="nsew", padx=5, pady=5)
         self.log_text = tk.Text(self.log_section, wrap="word", height=20, state="disabled", bg="lightgray")
         self.log_text.pack(fill="both", expand=True, padx=5, pady=5)
@@ -172,6 +166,7 @@ class PreProgrammingPage:
         color = command_label.cget("bg")
         block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2,
                          width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
+        # Create a content frame inside the block
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
         block.command_name = command_name
@@ -188,12 +183,21 @@ class PreProgrammingPage:
             tk.Entry(content_frame, textvariable=input_var, width=20).pack(side="left", padx=5)
             input_vars[var_name] = input_var
         block.input_vars = input_vars
+
+        # ADD DRAG EVENT BINDINGS to block and its content_frame
+        block.bind("<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk))
+        block.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
+        block.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
+        content_frame.bind("<ButtonPress-1>", lambda event, blk=block: self.on_drag_start(event, blk))
+        content_frame.bind("<B1-Motion>", lambda event, blk=block: self.on_drag_motion(event, blk))
+        content_frame.bind("<ButtonRelease-1>", lambda event, blk=block: self.on_drop(event, blk))
+
         return block
 
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
-        # Capture the offset inside the block where the user clicked
+        # Capture the offset within the block
         self.drag_data["widget"] = block
         self.drag_data["offset_x"] = event.x
         self.drag_data["offset_y"] = event.y
@@ -216,22 +220,19 @@ class PreProgrammingPage:
         self.highlight_target_row(target_row)
 
     def highlight_target_row(self, target_row):
-        # Highlight by changing the background of the corresponding grid slot
+        # Instead of a canvas rectangle, simply change the background of the target grid slot.
         for i, slot in enumerate(self.grid_slots):
-            if i == target_row:
-                slot.config(bg="lightblue")
-            else:
-                slot.config(bg="lightgray")
+            slot.config(bg="lightblue" if i == target_row else "lightgray")
 
     def clear_highlight(self):
         for slot in self.grid_slots:
             slot.config(bg="lightgray")
 
     def on_drop(self, event, block):
-        # When dropped, compute target row from block's current y position
         if block:
             y = block.winfo_y()
             target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
+            # If target row is occupied, move blocks down
             if self.grid_cells[target_row][0]:
                 self.move_blocks_down(target_row)
             block.grid_row = target_row
@@ -244,7 +245,7 @@ class PreProgrammingPage:
         self.clear_highlight()
 
     def move_blocks_down(self, start_row):
-        # Shift blocks downward starting from start_row
+        # Shift blocks downward from start_row (if needed)
         if len(self.grid_cells) <= start_row:
             return
         for row in range(len(self.grid_cells) - 1, start_row, -1):
@@ -268,6 +269,7 @@ class PreProgrammingPage:
                     block.grid_row = row
                     block.place(x=0, y=row * self.CELL_HEIGHT)
                     moved = True
+                    
     def clear_highlight(self):
         # Remove the highlight rectangle
         if self.highlight_rect:

@@ -564,7 +564,7 @@ class PreProgrammingPage:
                         continue
                     command_name = parts[0]
                     module_name = parts[1]
-                    # Build the inputs dictionary (ignoring empty parts)
+                    # Build inputs dictionary, ignoring empty parts
                     inputs = {}
                     for kv in parts[2:]:
                         if kv and "=" in kv:
@@ -581,14 +581,14 @@ class PreProgrammingPage:
                     if command_name not in command_module:
                         print(f"[load_program] ERROR: Command '{command_name}' not found in '{module_name}'!")
                         continue
-                    
+
                     expected_inputs = command_module[command_name].get("inputs", {})
-                    
-                    # Create the block using the updated create_block_from_data method
-                    block = self.create_block_from_data(command_name, expected_inputs, inputs, module_name)
+
+                    # Pass command_module along to create_block_from_data so the block has its module reference.
+                    block = self.create_block_from_data(command_name, expected_inputs, inputs, module_name, command_module)
                     if block is None:
                         continue
-                    
+
                     # Find the first available row in grid_cells.
                     placed = False
                     for r in range(len(self.grid_cells)):
@@ -601,7 +601,6 @@ class PreProgrammingPage:
                             print(f"[load_program] Placed block '{command_name}' in row {r}")
                             break
                     if not placed:
-                        # If all rows are occupied, add a new row.
                         self.add_row()
                         r = len(self.grid_cells) - 1
                         block.grid_row = r
@@ -612,7 +611,6 @@ class PreProgrammingPage:
                     
                     self.command_list.append(block)
                     print(f"[load_program] Appended block '{command_name}' to command_list.")
-            # After processing all lines, adjust the UI.
             self.move_blocks_up()
             self.refresh_visible_blocks()
             self.update_command_list()
@@ -713,15 +711,15 @@ class PreProgrammingPage:
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
-    def create_block_from_data(self, command_name, expected_inputs, input_values, module_name):
+    def create_block_from_data(self, command_name, expected_inputs, input_values, module_name, command_module):
         # Obtain the correct color for the module.
         modules_commands = load_modules()
         color = "#FF5733"  # Default color
         if module_name in modules_commands:
             color = modules_commands[module_name]["color"]
             self.module_colors[module_name] = color
-        # Set the row to be the current length of the command_list.
-        row = len(self.command_list)
+
+        row = len(self.command_list)  # New block goes at the end of command_list
         col = 0
         block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2,
                         width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
@@ -732,8 +730,12 @@ class PreProgrammingPage:
                         font=("Arial", 12, "bold"), anchor="w")
         label.pack(side="left", padx=5)
         block.command_label = label
+
+        # Store module information in the block.
         block.command_name = command_name
-        block.command_module_name = module_name  # Store module name for saving
+        block.command_module_name = module_name
+        block.command_module = command_module
+
         input_vars = {}
         for label_text, var_name in expected_inputs.items():
             tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
@@ -741,6 +743,7 @@ class PreProgrammingPage:
             tk.Entry(content_frame, textvariable=input_var, width=8).pack(side="left", padx=5)
             input_vars[var_name] = input_var
         block.input_vars = input_vars
+
         block.grid_row = row
         block.grid_col = col
         return block

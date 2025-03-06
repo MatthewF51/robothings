@@ -164,30 +164,18 @@ class PreProgrammingPage:
         if block is None:
             return
 
-        # Make sure the grid_cells data structure has a row for this block.
+        # **Fix**: Set grid_cell at next_row
         if next_row >= len(self.grid_cells):
+            # Optionally, add a new row if next_row is beyond current grid size
             self.grid_cells.append([None for _ in range(self.GRID_COLS)])
         block.grid_row = next_row
         block.grid_col = col
         self.grid_cells[next_row][col] = block
 
+        # Add to command list and refresh visible slots
         self.command_list.append(block)
-        
-        # Update the UI: Bubble blocks up and refresh visible slots.
-        self.update_ui()
-        print(f"[add_block_to_grid] Added block '{block.command_name}' at row {next_row}")
-
-    def update_ui(self):
-        """
-        Update the visual layout to match the internal grid state.
-        This method calls move_blocks_up (to bubble up blocks to fill gaps),
-        refreshes the visible slots, and then updates the command list.
-        """
-        self.move_blocks_up()
         self.refresh_visible_blocks()
-        self.update_command_list()
-        print("[update_ui] UI updated. Command list:", self.command_list)
-
+        print(f"[add_block_to_grid] Added block '{block.command_name}' at row {next_row}")
 
     def create_block(self, command_label, row, col, command_module):
         command_name = command_label.cget("text").strip()

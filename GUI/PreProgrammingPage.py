@@ -169,39 +169,37 @@ class PreProgrammingPage:
                     pady=2,
                 )
                 command_label.pack(pady=2, padx=5, fill="x")
+                # Pass the module name along with the commands dict.
                 command_label.bind(
                     "<Button-1>",
-                    lambda e, label=command_label, mod=commands: self.add_block_to_grid(
-                        label, mod
+                    lambda e, label=command_label, mod=commands, mod_name=module_name: self.add_block_to_grid(
+                        label, mod, mod_name
                     ),
                 )
 
-    def add_block_to_grid(self, command_label, command_module):
+    def add_block_to_grid(self, command_label, command_module, module_name):
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
         next_row = len(self.command_list)
         col = 0  # Always column 0
-
-        block = self.create_block(command_label, next_row, col, command_module)
+        block = self.create_block(
+            command_label, next_row, col, command_module, module_name
+        )
         if block is None:
             return
-
-        # **Fix**: Set grid_cell at next_row
+        # Ensure grid_cells has a row for this block.
         if next_row >= len(self.grid_cells):
-            # Optionally, add a new row if next_row is beyond current grid size
             self.grid_cells.append([None for _ in range(self.GRID_COLS)])
         block.grid_row = next_row
         block.grid_col = col
         self.grid_cells[next_row][col] = block
-
-        # Add to command list and refresh visible slots
         self.command_list.append(block)
         self.refresh_visible_blocks()
         print(
-            f"[add_block_to_grid] Added block '{block.command_name}' at row {next_row}"
+            f"[add_block_to_grid] Added block '{block.command_name}' in module '{module_name}' at row {next_row}"
         )
 
-    def create_block(self, command_label, row, col, command_module):
+    def create_block(self, command_label, row, col, command_module, module_name):
         command_name = command_label.cget("text").strip()
         if command_name not in command_module:
             print(
@@ -218,14 +216,13 @@ class PreProgrammingPage:
             width=self.CELL_WIDTH,
             height=self.CELL_HEIGHT,
         )
-        # Store original background color to restore after highlighting.
-        block.original_bg = color
-
         # Create a content frame inside the block
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
         block.command_name = command_name
         block.command_module = command_module
+        # Store the module name so it can be saved later.
+        block.command_module_name = module_name
         block.grid_row = row
         block.grid_col = col
         label = tk.Label(
@@ -541,21 +538,15 @@ class PreProgrammingPage:
                         continue
                     command_name = block.command_name
                     module_name = getattr(block, "command_module_name", "Unknown")
-                    inputs = {
-                        var_name: var.get()
-                        for var_name, var in block.input_vars.items()
-                    }
-                    input_line = (
-                        f"{command_name};{module_name};"
-                        + ";".join(f"{k}={v}" for k, v in inputs.items())
-                        + "\n"
-                    )
+                    inputs = {var_name: var.get() for var_name, var in block.input_vars.items()}
+                    input_line = f"{command_name};{module_name};" + ";".join(f"{k}={v}" for k, v in inputs.items()) + "\n"
                     file.write(input_line)
             messagebox.showinfo("Save", f"Program saved to {file_path}!")
             print(f"[save_program] Program saved to {file_path}")
         except Exception as e:
             messagebox.showerror("Save Error", f"Error saving program: {e}")
             print(f"[save_program] ERROR: {e}")
+
 
     def load_program(self, file_name):
         try:
@@ -704,48 +695,30 @@ class PreProgrammingPage:
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
-    def create_block_from_data(self, command_name, expected_inputs, input_values):
-        # Get the module color or use a default color
+    def create_block_from_data(self, command_name, expected_inputs, input_values, module_name):
         color = self.module_colors.get(command_name.split()[0], "#FF5733")
-        row = len(self.command_list)  # New block goes at the end of command_list
+        row = len(self.command_list)
         col = 0
-        block = tk.Frame(
-            self.programming_area,
-            bg=color,
-            relief="raised",
-            bd=2,
-            width=self.CELL_WIDTH,
-            height=self.CELL_HEIGHT,
-        )
+        block = tk.Frame(self.programming_area, bg=color, relief="raised", bd=2,
+                        width=self.CELL_WIDTH, height=self.CELL_HEIGHT)
         block.place(x=col * self.CELL_WIDTH, y=row * self.CELL_HEIGHT)
         content_frame = tk.Frame(block, bg=color)
         content_frame.pack(fill="both", expand=True, padx=10, pady=5)
-        label = tk.Label(
-            content_frame,
-            text=command_name,
-            bg=color,
-            fg="white",
-            font=("Arial", 12, "bold"),
-            anchor="w",
-        )
+        label = tk.Label(content_frame, text=command_name, bg=color, fg="white",
+                        font=("Arial", 12, "bold"), anchor="w")
         label.pack(side="left", padx=5)
         block.command_label = label
+        block.command_name = command_name
+        block.command_module_name = module_name  # Store module name here too.
         input_vars = {}
         for label_text, var_name in expected_inputs.items():
-            tk.Label(
-                content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)
-            ).pack(side="left", padx=5)
+            tk.Label(content_frame, text=label_text, bg=color, fg="white", font=("Arial", 10)).pack(side="left", padx=5)
             input_var = tk.StringVar(value=input_values.get(var_name, ""))
-            tk.Entry(content_frame, textvariable=input_var, width=8).pack(
-                side="left", padx=5
-            )
+            tk.Entry(content_frame, textvariable=input_var, width=8).pack(side="left", padx=5)
             input_vars[var_name] = input_var
         block.input_vars = input_vars
         block.grid_row = row
         block.grid_col = col
-        block.command_name = command_name
-        # If you store module name during block creation, do it here:
-        block.command_module_name = "Unknown"  # or assign appropriately if available
         return block
 
     def create_command_label(self, command_name):

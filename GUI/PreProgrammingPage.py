@@ -257,18 +257,18 @@ class PreProgrammingPage:
         return block
 
     def on_drag_start(self, event, block):
-        # Start dragging a block without it jumping down
+        # Fixes dragging to ensure the block stays attached properly
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
 
-        # Store the original position of the block
+        # Store original block position
         self.drag_data["widget"] = block
-        self.drag_data["start_x"] = event.x
-        self.drag_data["start_y"] = event.y
+        self.drag_data["start_x"] = event.x_root  # Capture global position
+        self.drag_data["start_y"] = event.y_root
         self.drag_data["orig_x"] = block.winfo_x()
         self.drag_data["orig_y"] = block.winfo_y()
 
-        # Ensure the block is lifted so it's on top of others
+        # Ensure block is on top
         block.lift()
 
 
@@ -356,25 +356,21 @@ class PreProgrammingPage:
                 block.place(x=0, y=row * self.CELL_HEIGHT)
 
     def move_blocks_up(self):
-        # Ensures all blocks are moved upwards to fill empty rows
-        new_command_list = []
+        # Moves all blocks up to remove empty rows and keep the order intact
+        new_command_list = [block for block in self.command_list if block is not None]  # Remove empty slots
 
-        # Gather all blocks, remove None values
-        for row in range(len(self.grid_cells)):
-            if self.grid_cells[row][0]:  # If there's a block
-                new_command_list.append(self.grid_cells[row][0])
-
-        # Clear the grid tracking
+        # Reset grid tracking
         self.grid_cells = [[None] for _ in range(self.GRID_ROWS)]
 
-        # Reassign blocks from top down
+        # Reassign blocks to top rows, removing gaps
         for i, block in enumerate(new_command_list):
-            block.grid_row = i  # Assign new row
-            self.grid_cells[i][0] = block  # Store in grid
-            block.place(x=0, y=i * self.CELL_HEIGHT)  # Move visually
+            block.grid_row = i
+            self.grid_cells[i][0] = block
+            block.place(x=0, y=i * self.CELL_HEIGHT)
 
         # Update command list
         self.command_list = new_command_list
+
 
 
     def clear_highlight(self):

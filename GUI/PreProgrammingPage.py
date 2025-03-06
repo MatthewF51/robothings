@@ -280,8 +280,9 @@ class PreProgrammingPage:
         if not self.drag_data["widget"]:
             return  # Prevent errors if dragging isn't started properly
 
-        x = self.programming_area.canvasx(event.x_root - self.frame.winfo_rootx())
-        y = self.programming_area.canvasy(event.y_root - self.frame.winfo_rooty())
+        x = event.x_root - self.frame.winfo_rootx()
+        y = event.y_root - self.frame.winfo_rooty()
+
 
         # Constrain movement to programming area
         x = max(0, min(x, self.CELL_WIDTH - block.winfo_width()))

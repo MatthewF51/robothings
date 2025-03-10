@@ -13,7 +13,6 @@ def send_command(command, duration=None):
     # Sends a ROS command using subprocess.Popen() for non-blocking execution.
 
     try:
-        print(f"Executing: {command}")  # Debugging output
         process = subprocess.Popen(
             command, shell=True, preexec_fn=os.setsid
         )  # Run in new process group
@@ -24,7 +23,6 @@ def send_command(command, duration=None):
             def stop_after_duration():
                 time.sleep(duration)
                 stop_command(command)
-                print(f"Command '{command}' stopped after {duration} seconds.")
 
             threading.Thread(target=stop_after_duration, daemon=True).start()
 
@@ -37,7 +35,6 @@ def stop_command(command):
 
     process = active_processes.get(command)
     if process:
-        print(f"Stopping command: {command}")
         os.killpg(
             os.getpgid(process.pid), signal.SIGINT
         )  # Send Ctrl-C to process group

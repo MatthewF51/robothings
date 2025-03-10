@@ -17,7 +17,11 @@ class StartScreen:
 
         # Create a title label
         title_label = tk.Label(
-            self.frame, text="CtrlWizard", font=("Arial", 24, "bold"), fg="black", bg="white"
+            self.frame,
+            text="CtrlWizard",
+            font=("Arial", 24, "bold"),
+            fg="black",
+            bg="white",
         )
         title_label.grid(row=0, column=0, pady=20, sticky="n")
 

@@ -3,10 +3,10 @@ from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 import cv2
 import threading
-import rospy  # type: ignore
-from sensor_msgs.msg import Image as ROSImage  # type: ignore
-from cv_bridge import CvBridge  # type: ignore
-from geometry_msgs.msg import Twist  # type: ignore
+import rospy
+from sensor_msgs.msg import Image as ROSImage
+from cv_bridge import CvBridge
+from geometry_msgs.msg import Twist
 import os
 import time
 import signal
@@ -14,6 +14,7 @@ import subprocess
 
 # ROS Topic for Tiago's Camera
 CAMERA_TOPIC = "/xtion/rgb/image_raw"
+
 
 class ObservationPage:
     # Sets up the Observation Page
@@ -126,9 +127,13 @@ class ObservationPage:
         box_d.grid(row=2, column=0, sticky="nsew", padx=5, pady=5)
 
         # Add a Text widget with a scrollbar for the command log
-        self.command_log_text = tk.Text(box_d, wrap="word", height=10, state="disabled", bg="lightgray")
+        self.command_log_text = tk.Text(
+            box_d, wrap="word", height=10, state="disabled", bg="lightgray"
+        )
         self.command_log_text.pack(fill="both", expand=True, padx=5, pady=5)
-        self.command_log_scroll = ttk.Scrollbar(box_d, command=self.command_log_text.yview)
+        self.command_log_scroll = ttk.Scrollbar(
+            box_d, command=self.command_log_text.yview
+        )
         self.command_log_scroll.pack(side="right", fill="y")
         self.command_log_text.config(yscrollcommand=self.command_log_scroll.set)
 
@@ -154,7 +159,6 @@ class ObservationPage:
     def emergency_stop(self):
         # Sends Ctrl+C to stop running commands without closing the UI
         self.log_action("!!! Emergency Stop Activated !!!")
-        print("!!! Emergency Stop Activated !!!")
         try:
             result = subprocess.run(
                 ["pgrep", "-f", "ros"], capture_output=True, text=True
@@ -163,14 +167,11 @@ class ObservationPage:
 
             if pids and pids[0]:
                 for pid in pids:
-                    print(f"Stopping process {pid} (rostopic pub)")
                     os.kill(int(pid), signal.SIGINT)
                 self.log_action("All commands stopped successfully.")
             else:
-                print("No active commands found to stop.")
                 self.log_action("No active commands were running.")
         except Exception as e:
-            print(f"Failed to send Ctrl+C: {e}")
             self.log_action(f"Error stopping commands: {e}")
 
     def log_action(self, message):
@@ -182,23 +183,21 @@ class ObservationPage:
         self.command_log_text.config(state="disabled")
         self.command_log_text.yview("end")
         self.log_entries.append(full_message)
-        print(full_message)
 
     def save_command_log(self):
         os.makedirs("ExperimentLogs", exist_ok=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         experiment_number = self.get_next_experiment_number("ExperimentLogs")
-        file_path = os.path.join("ExperimentLogs", f"experiment_{timestamp}_{experiment_number}.txt")
+        file_path = os.path.join(
+            "ExperimentLogs", f"experiment_{timestamp}_{experiment_number}.txt"
+        )
         try:
             with open(file_path, "w") as file:
                 for entry in self.log_entries:
                     file.write(entry + "\n")
             messagebox.showinfo("Save Log", f"Log saved to {file_path}!")
-            print(f"[save_command_log] Log saved to {file_path}")
         except Exception as e:
             messagebox.showerror("Save Error", f"Error saving log: {e}")
-            print(f"[save_command_log] ERROR: {e}")
-
 
     def get_next_experiment_number(self, log_dir):
         # Determine the next experiment number based on existing log files.

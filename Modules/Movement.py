@@ -3,7 +3,7 @@ from utils import send_command
 
 # Constants
 FIXED_ROTATION_SPEED = 1  # rad/s
-COMPENSATION_TIME = 2.5  # Extra time to account for delay
+COMPENSATION_TIME = 2.3  # Extra time to account for delay
 
 COMMANDS = {
     "Move Forward": {

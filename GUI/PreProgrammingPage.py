@@ -463,7 +463,7 @@ class PreProgrammingPage:
 
                     # Check for command completion dynamically
                     execution_time = self.estimate_execution_time(command_name, inputs)
-                    print("Sleeping for" + execution_time)
+                    print(execution_time)
                     time.sleep(execution_time)  # Wait for the command to finish
 
             except Exception as e:

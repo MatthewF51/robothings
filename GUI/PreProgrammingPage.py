@@ -482,20 +482,19 @@ class PreProgrammingPage:
     def estimate_execution_time(self, command_name, inputs):
         # Estimates execution time dynamically based on command type and input values
         # Example: Movement commands → Use distance & speed for estimation
+        from Modules.Movement import COMPENSATION_TIME
+        
         if command_name in ["Move Forward", "Move Backward"]:
             distance = float(inputs.get("distance", 0))  # Get distance
             speed = 0.5
-            return (distance / speed) + self.controller.Modules[
-                "Movement"
-            ].COMPENSATION_TIME
+            return ((distance / speed) + COMPENSATION_TIME)
 
         # Example: Rotation commands → Use degrees & rotation speed
         elif command_name in ["Rotate Left", "Rotate Right"]:
             degrees = float(inputs.get("degrees", 0))
             rotation_speed = 1
             return (
-                (degrees * 3.14159265 / 180) / rotation_speed
-            ) + self.controller.Modules["Movement"].COMPENSATION_TIME
+                (degrees * 3.14159265 / 180) / COMPENSATION_TIME)
 
         # Default time if no estimation is available
         return 10  # Assume a safe default execution time

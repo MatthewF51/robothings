@@ -57,7 +57,6 @@ def load_modules():
             module = importlib.import_module(f"Modules.{module_name}")
 
             if hasattr(module, "COMMANDS") and hasattr(module, "colour"):
-                print(module.COMMANDS)
                 modules[module_name] = {
                     "commands": module.COMMANDS,
                     "color": module.colour,

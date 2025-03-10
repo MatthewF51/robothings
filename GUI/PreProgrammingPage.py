@@ -768,8 +768,8 @@ class PreProgrammingPage:
             [None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)
         ]
         self.command_list.clear()
-        self.undo_list.clear()
-        self.redo_list.clear()
+        # self.undo_list.clear()
+        # self.redo_list.clear()
         self.scroll_position = 0
 
         print("[clear_programming_area] Programming area cleared.")

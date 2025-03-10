@@ -7,27 +7,21 @@ COMMANDS = {
         ),
         "inputs": {},
     },
-    "Move to Pick Pose": {
+    "Move to Offer Pose": {
         "function": lambda: send_command(
-            "rosrun play_motion run_motion_python_node.py pick"
+            "rosrun play_motion run_motion_python_node.py offer_right"
         ),
         "inputs": {},
     },
-    "Move to Pregrasp Pose": {
+    "Grip": {
         "function": lambda: send_command(
-            "rosrun play_motion run_motion_python_node.py prepare_grasp"
+            "rosrun play_motion run_motion_python_node.py close_right"
         ),
         "inputs": {},
     },
     "Move to Transport Pose": {
         "function": lambda: send_command(
-            "rosrun play_motion run_motion_python_node.py transport"
-        ),
-        "inputs": {},
-    },
-    "Move to Handover Pose": {
-        "function": lambda: send_command(
-            "rosrun play_motion run_motion_python_node.py offer"
+            "rosrun play_motion run_motion_python_node.py home_right"
         ),
         "inputs": {},
     },

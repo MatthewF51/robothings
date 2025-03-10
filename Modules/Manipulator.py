@@ -15,7 +15,7 @@ COMMANDS = {
     },
     "Move to Pregrasp Pose": {
         "function": lambda: send_command(
-            "rosrun play_motion run_motion_python_node.py pregrasp"
+            "rosrun play_motion run_motion_python_node.py prepare_grasp"
         ),
         "inputs": {},
     },
@@ -27,7 +27,7 @@ COMMANDS = {
     },
     "Move to Handover Pose": {
         "function": lambda: send_command(
-            "rosrun play_motion run_motion_python_node.py handover"
+            "rosrun play_motion run_motion_python_node.py offer"
         ),
         "inputs": {},
     },

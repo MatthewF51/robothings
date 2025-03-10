@@ -196,8 +196,19 @@ class ObservationPage:
                 for entry in self.log_entries:
                     file.write(entry + "\n")
             messagebox.showinfo("Save Log", f"Log saved to {file_path}!")
+            self.clear_log()
         except Exception as e:
             messagebox.showerror("Save Error", f"Error saving log: {e}")
+            self.clear_log()
+
+    def clear_log(self):
+        # Clear the Text widget
+        self.command_log_text.config(state="normal")
+        self.command_log_text.delete("1.0", "end")
+        self.command_log_text.config(state="disabled")
+        # Clear the internal log list
+        self.log_entries.clear()
+        print("[clear_log] Command log cleared.")
 
     def get_next_experiment_number(self, log_dir):
         # Determine the next experiment number based on existing log files.

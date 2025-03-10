@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from utils import load_modules, send_command
 import threading
 from Modules.Movement import COMMANDS
+from Modules.Movement import COMPENSATION_TIME
 import os
 import time
 
@@ -462,8 +463,7 @@ class PreProgrammingPage:
                     command_function(*inputs.values())  # Run the function
 
                     # Check for command completion dynamically
-                    execution_time = self.estimate_execution_time(command_name, inputs)
-                    print(execution_time)
+                    execution_time = self.estimate_execution_time(command_name, inputs) + COMPENSATION_TIME
                     time.sleep(execution_time)  # Wait for the command to finish
 
             except Exception as e:
@@ -482,7 +482,7 @@ class PreProgrammingPage:
     def estimate_execution_time(self, command_name, inputs):
         # Estimates execution time dynamically based on command type and input values
         # Example: Movement commands → Use distance & speed for estimation
-        from Modules.Movement import COMPENSATION_TIME
+        
         
         if command_name in ["Move Forward", "Move Backward"]:
             distance = float(inputs.get("distance", 0))  # Get distance

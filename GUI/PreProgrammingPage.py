@@ -411,6 +411,7 @@ class PreProgrammingPage:
         # Handles button clicks and logs actions
         self.log_action(f"Button clicked: {button_text}")
         if button_text == "Run":
+            self.controller.pages["ObservationPage"].log_action("Program started...")
             self.run_program()
         elif button_text == "Save":
             file_name = self.file_name_entry.get().strip()
@@ -438,7 +439,6 @@ class PreProgrammingPage:
     def run_program(self):
         # Executes commands using send_command() in a background thread and logs it
         self.controller.show_page("ObservationPage")
-        self.log_action("Program started...")
 
         # Start execute_commands in a new thread
         threading.Thread(target=self.execute_commands, daemon=True).start()
@@ -468,7 +468,7 @@ class PreProgrammingPage:
                 print(
                     f"ERROR: '{command_name}' not found in module! Available: {list(command_module.keys())}"
                 )
-                self.log_action(f"Error: Unknown command {command_name}")
+                self.controller.pages["ObservationPage"].log_action(f"Error: Unknown command {command_name}")
                 continue
 
             command_info = command_module[command_name]
@@ -481,7 +481,7 @@ class PreProgrammingPage:
 
             try:
                 print(f"Executing: {command_name} with inputs {inputs}")
-                self.log_action(f"Executing: {command_name} with {inputs}")
+                self.controller.pages["ObservationPage"].log_action(f"Executing: {command_name} with {inputs}")
 
                 if command_name == "Speak Text":
                     # Speech runs in parallel (does not block execution)
@@ -503,7 +503,7 @@ class PreProgrammingPage:
 
             except Exception as e:
                 print(f"Execution Failed for {command_name}: {e}")
-                self.log_action(f"Error running {command_name}: {e}")
+                self.controller.pages["ObservationPage"].log_action(f"Error running {command_name}: {e}")
 
             # Update progress bar
             percent_complete = ((index + 1) / total_commands) * 100

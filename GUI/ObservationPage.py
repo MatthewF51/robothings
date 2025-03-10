@@ -185,20 +185,20 @@ class ObservationPage:
         print(full_message)
 
     def save_command_log(self):
-        # Save the collected log entries into a file.
-        log_dir = "ExperimentLogs"
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        os.makedirs("ExperimentLogs", exist_ok=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        experiment_number = self.get_next_experiment_number(log_dir)
-        filename = f"experiment_{timestamp}_{experiment_number}.txt"
-        file_path = os.path.join(log_dir, filename)
+        experiment_number = self.get_next_experiment_number("ExperimentLogs")
+        file_path = os.path.join("ExperimentLogs", f"experiment_{timestamp}_{experiment_number}.txt")
         try:
             with open(file_path, "w") as file:
-                file.write("\n".join(self.log_entries))
-            self.log_action(f"Log saved to {file_path}")
+                for entry in self.log_entries:
+                    file.write(entry + "\n")
+            messagebox.showinfo("Save Log", f"Log saved to {file_path}!")
+            print(f"[save_command_log] Log saved to {file_path}")
         except Exception as e:
-            self.log_action(f"Error saving log: {e}")
+            messagebox.showerror("Save Error", f"Error saving log: {e}")
+            print(f"[save_command_log] ERROR: {e}")
+
 
     def get_next_experiment_number(self, log_dir):
         # Determine the next experiment number based on existing log files.

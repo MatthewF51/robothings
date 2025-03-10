@@ -150,6 +150,8 @@ class ObservationPage:
         self.progress_value.set(percent)
         self.progress_label.config(text=f"Execution Progress: {int(percent)}%")
         self.frame.update_idletasks()  # Ensure smooth UI update
+        if percent == 100:
+            self.save_command_log()
 
     def emergency_stop(self):
         # Sends Ctrl+C to stop running commands without closing the UI

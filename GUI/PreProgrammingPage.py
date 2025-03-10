@@ -510,6 +510,7 @@ class PreProgrammingPage:
             self.controller.pages["ObservationPage"].update_progress(percent_complete)
 
         self.controller.pages["ObservationPage"].update_progress(100)  # Complete
+        self.controller.pages["ObservationPage"].log_action(f"Execution Completed")
 
     def estimate_execution_time(self, command_name, inputs):
         # Estimates execution time dynamically based on command type and input values

@@ -271,7 +271,7 @@ class PreProgrammingPage:
         self.redo_list.clear()
         self.drag_data["widget"] = block
 
-        # Get the programming area’s top-left coordinates.
+        # Get the programming area's top-left coordinates.
         prog_area_x = self.programming_area.winfo_rootx()
         prog_area_y = self.programming_area.winfo_rooty()
 
@@ -285,9 +285,13 @@ class PreProgrammingPage:
         self.drag_data["row"] = block.grid_row
         self.drag_data["col"] = block.grid_col
 
-        # Free the grid cell
+        # Remove the block from its grid cell
         self.grid_cells[block.grid_row][block.grid_col] = None
         self.clear_highlight()
+        
+        # Reparent the block to programming_area
+        block.place(in_=self.programming_area)
+
 
     def on_drag_motion(self, event, block):
         prog_area_x = self.programming_area.winfo_rootx()
@@ -297,17 +301,26 @@ class PreProgrammingPage:
         local_x = event.x_root - prog_area_x
         local_y = event.y_root - prog_area_y
 
+        # Debug prints
+        print(f"Cursor (global): ({event.x_root}, {event.y_root})")
+        print(f"Programming area (global): ({prog_area_x}, {prog_area_y})")
+        print(f"Cursor (local): ({local_x}, {local_y})")
+        print(f"Block dims: ({block.winfo_width()}, {block.winfo_height()})")
+
         # Center the block on the cursor
         new_x = local_x - block.winfo_width() / 2
         new_y = local_y - block.winfo_height() / 2
 
-        # If you want to keep it within bounds:
+        # Clamp values if necessary
         new_x = max(0, min(new_x, self.CELL_WIDTH - block.winfo_width()))
         new_y = max(0, min(new_y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+
+        print(f"New position: ({new_x}, {new_y})")
 
         block.place(x=new_x, y=new_y)
         target_row = max(0, min(int(new_y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
         self.highlight_target_row(target_row)
+
 
 
     def highlight_target_row(self, target_row):

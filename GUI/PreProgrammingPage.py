@@ -358,8 +358,6 @@ class PreProgrammingPage:
                 self.grid_slots[target_row].config(bg="lightblue")
 
     def clear_highlight(self):
-        # Reset last highlighted row and UI elements
-        self.last_highlighted_row = None
         for i, slot in enumerate(self.grid_slots):
             slot.config(bg="lightgray")
             if self.grid_cells[i][0]:
@@ -367,6 +365,8 @@ class PreProgrammingPage:
                 block.config(bg=block.original_bg)
                 if block.winfo_children():
                     block.winfo_children()[0].config(bg=block.original_bg)
+        self.last_highlighted_row = None
+
 
     def on_drop(self, event, block):
         # Determine target row based on highlighted row or block's position.
@@ -413,6 +413,10 @@ class PreProgrammingPage:
         self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
         self.clear_highlight()
         
+        self.update_command_list()
+        self.refresh_visible_blocks()
+        
+        self.update_command_list()
         self.refresh_visible_blocks()
 
 

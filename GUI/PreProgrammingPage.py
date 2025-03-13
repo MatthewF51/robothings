@@ -312,7 +312,7 @@ class PreProgrammingPage:
         parent_offset_x = self.drag_data.get("parent_offset_x", 0)
         parent_offset_y = self.drag_data.get("parent_offset_y", 0)
         new_x_local = new_x_abs - parent_offset_x
-        new_y_local = new_y_abs - parent_offset_y - 30
+        new_y_local = new_y_abs - parent_offset_y - (45 * (prog_area_y/60))
 
         # Optional: clamp values to keep the block within bounds.
         new_x_local = max(0, min(new_x_local, self.CELL_WIDTH - block.winfo_width()))

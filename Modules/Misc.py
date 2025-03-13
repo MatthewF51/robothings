@@ -2,7 +2,7 @@ import time
 
 COMMANDS = {
     "Pause": {
-        "function": lambda inputs: time.sleep(inputs["Time"]),
+        "function": lambda Time: time.sleep(Time),
         "inputs": {"Time": "time"},
     }
 }

@@ -456,6 +456,8 @@ class PreProgrammingPage:
                     threading.Thread(
                         target=command_function, args=inputs.values(), daemon=True
                     ).start()
+                elif command_name == "Pause":
+                    command_function(*inputs.values())
                 else:
                     # Other commands execute one after the other
                     start_time = time.time()  # ⏳ Start timing execution

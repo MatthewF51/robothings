@@ -323,7 +323,6 @@ class PreProgrammingPage:
         print(f"[DEBUG] prog_area_x={prog_area_x}, prog_area_y={prog_area_y}")
         print(f"[DEBUG] block local coords: x={block.winfo_x()}, y={block.winfo_y()}")
         print(f"[DEBUG] block dims: width={block.winfo_width()}, height={block.winfo_height()}")
-        print(f"[DEBUG] computed new_x={new_x}, new_y={new_y}")
 
         block.place(x=new_x_local, y=new_y_local)
 

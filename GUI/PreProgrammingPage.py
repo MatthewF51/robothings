@@ -357,6 +357,8 @@ class PreProgrammingPage:
                 self.grid_cells[row - 1][0] = None
                 block.grid_row = row
                 block.place(x=0, y=row * self.CELL_HEIGHT)
+        self.update_command_list()
+        self.refresh_visible_blocks()
 
     def move_blocks_up(self):
         moved = True
@@ -405,6 +407,8 @@ class PreProgrammingPage:
 
     def run_program(self):
         # Executes commands using send_command() in a background thread and logs it
+        self.controller.pages["ObservationPage"].update_progress(0)  # Start
+        
         self.controller.show_page("ObservationPage")
 
         # Start execute_commands in a new thread

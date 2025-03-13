@@ -13,6 +13,12 @@ COMMANDS = {
         ),
         "inputs": {},
     },
+    "Open Grip": {
+        "function": lambda: send_command(
+            "rosrun play_motion run_motion_python_node.py open_right"
+        ),
+        "inputs": {},
+    },
     "Grip": {
         "function": lambda: send_command(
             "rosrun play_motion run_motion_python_node.py close_right"

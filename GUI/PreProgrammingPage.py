@@ -277,6 +277,31 @@ class PreProgrammingPage:
         # Free the grid cell
         self.grid_cells[block.grid_row][block.grid_col] = None
         self.clear_highlight()
+        
+    def on_drag_start(self, event, block):
+        self.undo_list.append(self.capture_state())
+        self.redo_list.clear()
+        self.drag_data["widget"] = block
+
+        # Compute the base offsets using absolute coordinates.
+        base_offset_x = event.x_root - block.winfo_rootx()
+        base_offset_y = event.y_root - block.winfo_rooty()
+
+        # Compute a correction factor based on the row.
+        # For example, if row 1 is correct, and each subsequent row has an extra 10px offset:
+        row_correction = (block.grid_row - 1) * 10  # Adjust 10 to match your layout
+        corrected_offset_y = base_offset_y - row_correction
+
+        self.drag_data["offset_x"] = base_offset_x
+        self.drag_data["offset_y"] = corrected_offset_y
+        self.drag_data["row"] = block.grid_row
+        self.drag_data["col"] = block.grid_col
+
+        # Free the grid cell and clear any highlights.
+        self.grid_cells[block.grid_row][block.grid_col] = None
+        self.clear_highlight()
+
+
 
     def on_drag_motion(self, event, block):
         prog_area_x = self.programming_area.winfo_rootx()

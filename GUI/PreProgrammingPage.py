@@ -271,57 +271,57 @@ class PreProgrammingPage:
         self.redo_list.clear()
         self.drag_data["widget"] = block
 
-        # Get the programming area's top-left coordinates.
+        # Get programming area absolute coordinates.
         prog_area_x = self.programming_area.winfo_rootx()
         prog_area_y = self.programming_area.winfo_rooty()
 
-        # Get the block’s current position relative to the programming area.
-        block_x = block.winfo_x()
-        block_y = block.winfo_y()
+        # Get block's absolute position (using its current parent's coordinate system).
+        block_abs_x = block.winfo_rootx()
+        block_abs_y = block.winfo_rooty()
 
-        # Compute offsets relative to the programming area.
-        self.drag_data["offset_x"] = event.x_root - (prog_area_x + block_x)
-        self.drag_data["offset_y"] = event.y_root - (prog_area_y + block_y)
+        # Compute the offset between the cursor and the block's top-left.
+        # (This is not used when centering, but might be useful if you switch modes.)
+        self.drag_data["offset_x"] = event.x_root - block_abs_x
+        self.drag_data["offset_y"] = event.y_root - block_abs_y
+
+        # Store the parent's offset relative to programming_area.
+        parent = block.master  # grid slot
+        self.drag_data["parent_offset_x"] = parent.winfo_rootx() - prog_area_x
+        self.drag_data["parent_offset_y"] = parent.winfo_rooty() - prog_area_y
+
         self.drag_data["row"] = block.grid_row
         self.drag_data["col"] = block.grid_col
 
-        # Remove the block from its grid cell
+        # Free the grid cell
         self.grid_cells[block.grid_row][block.grid_col] = None
         self.clear_highlight()
-        
-        # Reparent the block to programming_area
-        block.place(in_=self.programming_area)
 
 
     def on_drag_motion(self, event, block):
+        # Get programming area absolute coordinates.
         prog_area_x = self.programming_area.winfo_rootx()
         prog_area_y = self.programming_area.winfo_rooty()
 
-        # Convert event's global coords to local
-        local_x = event.x_root - prog_area_x
-        local_y = event.y_root - prog_area_y
+        # Compute where the block should be placed in the programming area's coordinate system
+        # so that its center is under the cursor.
+        new_x_abs = event.x_root - prog_area_x - block.winfo_width() / 2
+        new_y_abs = event.y_root - prog_area_y - block.winfo_height() / 2
 
-        # Debug prints
-        print(f"Cursor (global): ({event.x_root}, {event.y_root})")
-        print(f"Programming area (global): ({prog_area_x}, {prog_area_y})")
-        print(f"Cursor (local): ({local_x}, {local_y})")
-        print(f"Block dims: ({block.winfo_width()}, {block.winfo_height()})")
+        # Convert these absolute coordinates to coordinates relative to the block's parent.
+        # This is where the parent's offset comes into play.
+        parent_offset_x = self.drag_data.get("parent_offset_x", 0)
+        parent_offset_y = self.drag_data.get("parent_offset_y", 0)
+        new_x_local = new_x_abs - parent_offset_x
+        new_y_local = new_y_abs - parent_offset_y
 
-        # Center the block on the cursor
-        new_x = local_x - block.winfo_width() / 2
-        new_y = local_y - block.winfo_height() / 2
+        # Optional: clamp values to keep the block within bounds.
+        new_x_local = max(0, min(new_x_local, self.CELL_WIDTH - block.winfo_width()))
+        new_y_local = max(0, min(new_y_local, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
 
-        # Clamp values if necessary
-        new_x = max(0, min(new_x, self.CELL_WIDTH - block.winfo_width()))
-        new_y = max(0, min(new_y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+        block.place(x=new_x_local, y=new_y_local)
 
-        print(f"New position: ({new_x}, {new_y})")
-
-        block.place(x=new_x, y=new_y)
-        target_row = max(0, min(int(new_y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
+        target_row = max(0, min(int(new_y_abs // self.CELL_HEIGHT), self.GRID_ROWS - 1))
         self.highlight_target_row(target_row)
-
-
 
     def highlight_target_row(self, target_row):
         # Only update if the target row has changed.

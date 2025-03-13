@@ -312,11 +312,18 @@ class PreProgrammingPage:
         parent_offset_x = self.drag_data.get("parent_offset_x", 0)
         parent_offset_y = self.drag_data.get("parent_offset_y", 0)
         new_x_local = new_x_abs - parent_offset_x
-        new_y_local = new_y_abs - parent_offset_y - (45 * (prog_area_y/60))
+        extra_offset = 45 * (block.grid_row - 1)
+        new_y_local = new_y_abs - parent_offset_y - extra_offset
 
         # Optional: clamp values to keep the block within bounds.
         new_x_local = max(0, min(new_x_local, self.CELL_WIDTH - block.winfo_width()))
         new_y_local = max(0, min(new_y_local, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+        
+        print(f"[DEBUG] event.x_root={event.x_root}, event.y_root={event.y_root}")
+        print(f"[DEBUG] prog_area_x={prog_area_x}, prog_area_y={prog_area_y}")
+        print(f"[DEBUG] block local coords: x={block.winfo_x()}, y={block.winfo_y()}")
+        print(f"[DEBUG] block dims: width={block.winfo_width()}, height={block.winfo_height()}")
+        print(f"[DEBUG] computed new_x={new_x}, new_y={new_y}")
 
         block.place(x=new_x_local, y=new_y_local)
 

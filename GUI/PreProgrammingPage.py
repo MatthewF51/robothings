@@ -411,6 +411,8 @@ class PreProgrammingPage:
         # Clear drag data and highlights.
         self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
         self.clear_highlight()
+        
+        self.refresh_visible_blocks()
 
 
     def move_block_down(self, visible_row):

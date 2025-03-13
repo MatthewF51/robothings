@@ -220,6 +220,7 @@ class PreProgrammingPage:
         block.command_module = command_module
         # Store the module name so it can be saved later.
         block.command_module_name = module_name
+        block.original_bg = color
         block.grid_row = row
         block.grid_col = col
         label = tk.Label(
@@ -289,7 +290,7 @@ class PreProgrammingPage:
 
         # Compute a correction factor based on the row.
         # For example, if row 1 is correct, and each subsequent row has an extra 10px offset:
-        row_correction = (block.grid_row - 1) * 10  # Adjust 10 to match your layout
+        row_correction = (block.grid_row - 1) * 100  # Adjust 10 to match your layout
         corrected_offset_y = base_offset_y - row_correction
 
         self.drag_data["offset_x"] = base_offset_x

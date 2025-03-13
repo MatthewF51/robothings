@@ -265,7 +265,7 @@ class PreProgrammingPage:
         )
 
         return block
-
+    """
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())
         self.redo_list.clear()
@@ -278,6 +278,7 @@ class PreProgrammingPage:
         # Free the grid cell
         self.grid_cells[block.grid_row][block.grid_col] = None
         self.clear_highlight()
+    """
         
     def on_drag_start(self, event, block):
         self.undo_list.append(self.capture_state())

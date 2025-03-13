@@ -867,24 +867,34 @@ class PreProgrammingPage:
             for widget in slot.winfo_children():
                 widget.destroy()
 
-        # Populate visible slots based on current scroll_position.
-        for i in range(self.visible_rows):
-            row_index = self.scroll_position + i
-            if row_index < len(self.command_list):
-                block = self.command_list[row_index]
-                # Update the block's grid_row to be relative to the visible area.
-                block.grid_row = i
-                # Place the block into the corresponding grid slot.
-                block.place(in_=self.grid_slots[i], x=0, y=0)
+        # Iterate through all blocks in the command_list.
+        for idx, block in enumerate(self.command_list):
+            # If the block is within the visible range, reparent and display it.
+            if self.scroll_position <= idx < self.scroll_position + self.visible_rows:
+                visible_index = idx - self.scroll_position
+                block.grid_row = visible_index  # Update relative grid row.
+                block.place(in_=self.grid_slots[visible_index], x=0, y=0)
+            else:
+                # Hide blocks outside the visible area.
+                block.place_forget()
+
 
 
     def update_command_list(self):
         # Sort the command_list by the block's current vertical position (y coordinate)
         sorted_blocks = sorted(self.command_list, key=lambda block: block.winfo_y())
-        # Clear grid_cells and reassign blocks row-by-row
-        self.grid_cells = [[None] for _ in range(self.GRID_ROWS)]
+        
+        # Reinitialize grid_cells with the correct dimensions.
+        # This ensures that each row has GRID_COLS columns.
+        self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
+        
+        # Reassign blocks to rows and update their placement.
         for i, block in enumerate(sorted_blocks):
             block.grid_row = i
-            self.grid_cells[i][0] = block
+            # Assign the block to the grid_cells list (column 0)
+            if i < len(self.grid_cells):
+                self.grid_cells[i][0] = block
             block.place(x=0, y=i * self.CELL_HEIGHT)
+        
         self.command_list = sorted_blocks
+

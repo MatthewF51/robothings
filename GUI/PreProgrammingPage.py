@@ -38,7 +38,7 @@ class PreProgrammingPage:
         self.redo_list = []
 
         # Scrolling stuff
-        self.visible_rows = 8  # Number of visible rows at a time
+        self.visible_rows = 16  # Number of visible rows at a time
         self.scroll_position = 0  # Current scroll index
 
         self.module_colors = {}

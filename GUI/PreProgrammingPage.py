@@ -292,24 +292,23 @@ class PreProgrammingPage:
     def on_drag_motion(self, event, block):
         prog_area_x = self.programming_area.winfo_rootx()
         prog_area_y = self.programming_area.winfo_rooty()
-        
-        # Calculate the new position so that the block is centered on the cursor.
-        new_x = event.x_root - prog_area_x - block.winfo_width() / 2
-        new_y = event.y_root - prog_area_y - block.winfo_height() / 2
 
-        # Print debug info to see the calculations.
-        print("Event coordinates (root):", event.x_root, event.y_root)
-        print("Programming area position (root):", prog_area_x, prog_area_y)
-        print("Block dimensions:", block.winfo_width(), block.winfo_height())
-        print("Calculated new position:", new_x, new_y)
-        
-        # Clamp the values to remain inside the programming area.
+        # Convert event's global coords to local
+        local_x = event.x_root - prog_area_x
+        local_y = event.y_root - prog_area_y
+
+        # Center the block on the cursor
+        new_x = local_x - block.winfo_width() / 2
+        new_y = local_y - block.winfo_height() / 2
+
+        # If you want to keep it within bounds:
         new_x = max(0, min(new_x, self.CELL_WIDTH - block.winfo_width()))
         new_y = max(0, min(new_y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
-        
+
         block.place(x=new_x, y=new_y)
         target_row = max(0, min(int(new_y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
         self.highlight_target_row(target_row)
+
 
     def highlight_target_row(self, target_row):
         # Only update if the target row has changed.

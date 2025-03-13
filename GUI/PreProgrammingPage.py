@@ -358,6 +358,8 @@ class PreProgrammingPage:
                 self.grid_slots[target_row].config(bg="lightblue")
 
     def clear_highlight(self):
+        # Reset last highlighted row and UI elements
+        self.last_highlighted_row = None
         for i, slot in enumerate(self.grid_slots):
             slot.config(bg="lightgray")
             if self.grid_cells[i][0]:
@@ -365,7 +367,6 @@ class PreProgrammingPage:
                 block.config(bg=block.original_bg)
                 if block.winfo_children():
                     block.winfo_children()[0].config(bg=block.original_bg)
-        self.last_highlighted_row = None
 
 
     def on_drop(self, event, block):
@@ -394,7 +395,7 @@ class PreProgrammingPage:
             self.command_list.append(block)
         else:
             self.command_list.insert(target_row, block)
-
+        """
         # Rebuild the grid layout based on the updated command list.
         self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
         for idx, blk in enumerate(self.command_list):
@@ -403,7 +404,7 @@ class PreProgrammingPage:
             self.grid_cells[idx][0] = blk
             # Place each block in its proper row.
             blk.place(x=0, y=idx * self.CELL_HEIGHT)
-        
+        """
         # Update any UI elements related to scrolling or ordering.
         self.update_command_list()
         self.clear_highlight()
@@ -412,12 +413,6 @@ class PreProgrammingPage:
         # Clear drag data and highlights.
         self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
         self.clear_highlight()
-        
-        self.update_command_list()
-        self.refresh_visible_blocks()
-        
-        self.update_command_list()
-        self.refresh_visible_blocks()
 
 
     def move_block_down(self, visible_row):

@@ -862,18 +862,21 @@ class PreProgrammingPage:
             self.refresh_visible_blocks()
 
     def refresh_visible_blocks(self):
-        # Clear current display
+        # Clear current display in all visible grid slots.
         for slot in self.grid_slots:
             for widget in slot.winfo_children():
                 widget.destroy()
 
-        # Populate visible slots based on scroll position
+        # Populate visible slots based on current scroll_position.
         for i in range(self.visible_rows):
             row_index = self.scroll_position + i
             if row_index < len(self.command_list):
                 block = self.command_list[row_index]
-                block.grid_row = i  # Update position within visible rows
+                # Update the block's grid_row to be relative to the visible area.
+                block.grid_row = i
+                # Place the block into the corresponding grid slot.
                 block.place(in_=self.grid_slots[i], x=0, y=0)
+
 
     def update_command_list(self):
         # Sort the command_list by the block's current vertical position (y coordinate)

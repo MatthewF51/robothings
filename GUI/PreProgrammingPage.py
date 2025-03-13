@@ -316,11 +316,15 @@ class PreProgrammingPage:
         if block.grid_row == 0:
             new_y_local = new_y_abs - parent_offset_y
         else:
-            new_y_local = new_y_abs - parent_offset_y - 60*block.grid_row
+            new_y_local = new_y_abs - parent_offset_y - 70*block.grid_row
 
         # Optional: clamp values to keep the block within bounds.
         new_x_local = max(0, min(new_x_local, self.CELL_WIDTH - block.winfo_width()))
-        new_y_local = max(0, min(new_y_local, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+        
+        if block.grid_row == 0:
+            new_y_local = max(0, min(new_y_local, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+        else:
+            new_y_local = max(0, min(new_y_local, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height())) - 70*block.grid_row
 
         block.place(x=new_x_local, y=new_y_local)
 

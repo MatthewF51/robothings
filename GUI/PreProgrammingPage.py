@@ -369,55 +369,73 @@ class PreProgrammingPage:
                     block.winfo_children()[0].config(bg=block.original_bg)
 
     def on_drop(self, event, block):
-        if block:
+        # Determine target row based on highlighted row or block's position.
+        if self.last_highlighted_row is not None:
+            target_row = self.last_highlighted_row
+        else:
             y = block.winfo_y()
-            target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
-            print(target_row)
-            if self.grid_cells[target_row][0]:
-                self.move_blocks_down(target_row)
-            block.grid_row = target_row
-            block.grid_col = 0
-            self.grid_cells[target_row][0] = block
-            block.place(x=0, y=target_row * self.CELL_HEIGHT)
-            self.update_command_list()
-            self.move_blocks_up()
-        self.drag_data = {
-            "widget": None,
-            "row": None,
-            "col": None,
-            "offset_x": 0,
-            "offset_y": 0,
-        }
+            target_row = int(y // self.CELL_HEIGHT)
+        
+        # Clamp the target row to the visible region.
+        visible_top = self.scroll_position
+        visible_bottom = self.scroll_position + self.visible_rows - 1
+        if target_row < visible_top:
+            target_row = visible_top
+        elif target_row > visible_bottom:
+            target_row = visible_bottom
+
+        print(f"Dropping block '{block.command_name}' at target row: {target_row}")
+
+        # Update the command list by removing the block from its old position and inserting at target_row.
+        if block in self.command_list:
+            self.command_list.remove(block)
+        # If target_row is beyond current length, append.
+        if target_row >= len(self.command_list):
+            self.command_list.append(block)
+        else:
+            self.command_list.insert(target_row, block)
+
+        # Rebuild the grid layout based on the updated command list.
+        self.grid_cells = [[None for _ in range(self.GRID_COLS)] for _ in range(self.GRID_ROWS)]
+        for idx, blk in enumerate(self.command_list):
+            blk.grid_row = idx
+            blk.grid_col = 0
+            self.grid_cells[idx][0] = blk
+            # Place each block in its proper row.
+            blk.place(x=0, y=idx * self.CELL_HEIGHT)
+        
+        # Update any UI elements related to scrolling or ordering.
+        self.update_command_list()
+        self.refresh_visible_blocks()
+
+        # Clear drag data and highlights.
+        self.drag_data = {"widget": None, "row": None, "col": None, "offset_x": 0, "offset_y": 0}
         self.clear_highlight()
 
-    def move_blocks_down(self, start_row):
-        if len(self.grid_cells) <= start_row:
-            return
-        for row in range(len(self.grid_cells) - 1, start_row, -1):
-            if self.grid_cells[row - 1][0]:
-                block = self.grid_cells[row - 1][0]
-                self.grid_cells[row][0] = block
-                self.grid_cells[row - 1][0] = None
-                block.grid_row = row
-                block.place(x=0, y=row * self.CELL_HEIGHT)
-        self.update_command_list()
-        self.refresh_visible_blocks()
 
-    def move_blocks_up(self):
-        moved = True
-        while moved:
-            moved = False
-            for row in range(len(self.grid_cells) - 1):
-                if not self.grid_cells[row][0] and self.grid_cells[row + 1][0]:
-                    block = self.grid_cells[row + 1][0]
+    def move_block_down(self, visible_row):
+        # visible_row is the row index relative to the visible grid (0 <= visible_row < visible_rows)
+        abs_index = self.scroll_position + visible_row
+        if abs_index < len(self.command_list) - 1:
+            # Swap the block with the next block in the absolute order
+            self.command_list[abs_index], self.command_list[abs_index + 1] = (
+                self.command_list[abs_index + 1],
+                self.command_list[abs_index],
+            )
+            self.update_command_list()  # Update any state if needed
+            self.refresh_visible_blocks()  # Rebuild grid_slots from command_list
 
-                    self.grid_cells[row][0] = block
-                    self.grid_cells[row + 1][0] = None
-                    block.grid_row = row
-                    block.place(x=0, y=row * self.CELL_HEIGHT)
-                    moved = True
-        self.update_command_list()
-        self.refresh_visible_blocks()
+    def move_block_up(self, visible_row):
+        abs_index = self.scroll_position + visible_row
+        if abs_index > 0:
+            # Swap with the previous block
+            self.command_list[abs_index], self.command_list[abs_index - 1] = (
+                self.command_list[abs_index - 1],
+                self.command_list[abs_index],
+            )
+            self.update_command_list()
+            self.refresh_visible_blocks()
+
 
     def handle_button_click(self, button_text):
         # Handles button clicks and logs actions

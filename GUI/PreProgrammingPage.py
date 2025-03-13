@@ -324,7 +324,7 @@ class PreProgrammingPage:
         if block.grid_row == 0:
             new_y_local = max(0, min(new_y_local, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
         else:
-            new_y_local = max(0, min(new_y_local, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height())) - 70*block.grid_row
+            new_y_local = 0
 
         block.place(x=new_x_local, y=new_y_local)
 

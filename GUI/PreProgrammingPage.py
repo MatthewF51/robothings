@@ -313,7 +313,7 @@ class PreProgrammingPage:
         parent_offset_y = self.drag_data.get("parent_offset_y", 0)
         new_x_local = new_x_abs - parent_offset_x
         
-        if block.grid_row == 1:
+        if block.grid_row == 0:
             new_y_local = new_y_abs - parent_offset_y
         else:
             new_y_local = new_y_abs - parent_offset_y - 60*block.grid_row

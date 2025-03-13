@@ -406,6 +406,7 @@ class PreProgrammingPage:
         
         # Update any UI elements related to scrolling or ordering.
         self.update_command_list()
+        self.clear_highlight()
         self.refresh_visible_blocks()
 
         # Clear drag data and highlights.

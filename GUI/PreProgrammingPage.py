@@ -290,17 +290,23 @@ class PreProgrammingPage:
         self.clear_highlight()
 
     def on_drag_motion(self, event, block):
+        # Get the programming area’s top-left coordinates
         prog_area_x = self.programming_area.winfo_rootx()
         prog_area_y = self.programming_area.winfo_rooty()
-        new_x = event.x_root - prog_area_x - self.drag_data["offset_x"]
-        new_y = event.y_root - prog_area_y - self.drag_data["offset_y"]
+        
+        # Calculate new positions relative to the programming area.
+        new_x = event.x_root - prog_area_x - block.winfo_width() / 2
+        new_y = event.y_root - prog_area_y - block.winfo_height() / 2
+
+
+        # Clamp the values if needed, for example:
         new_x = max(0, min(new_x, self.CELL_WIDTH - block.winfo_width()))
-        new_y = max(
-            0, min(new_y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height())
-        )
+        new_y = max(0, min(new_y, self.GRID_ROWS * self.CELL_HEIGHT - block.winfo_height()))
+
         block.place(x=new_x, y=new_y)
         target_row = max(0, min(int(new_y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
         self.highlight_target_row(target_row)
+
 
     def highlight_target_row(self, target_row):
         # Only update if the target row has changed.

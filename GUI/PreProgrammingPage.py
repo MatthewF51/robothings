@@ -10,7 +10,7 @@ import time
 
 class PreProgrammingPage:
     # Programming grid setup
-    GRID_ROWS = 10
+    GRID_ROWS = 12
     GRID_COLS = 1
     CELL_HEIGHT = 60
     CELL_WIDTH = 750
@@ -38,7 +38,7 @@ class PreProgrammingPage:
         self.redo_list = []
 
         # Scrolling stuff
-        self.visible_rows = 16  # Number of visible rows at a time
+        self.visible_rows = 12  # Number of visible rows at a time
         self.scroll_position = 0  # Current scroll index
 
         self.module_colors = {}
@@ -316,7 +316,7 @@ class PreProgrammingPage:
         if block.grid_row == 0:
             new_y_local = new_y_abs - parent_offset_y
         else:
-            new_y_local = new_y_abs - parent_offset_y - 70*block.grid_row
+            new_y_local = new_y_abs - parent_offset_y - 75*block.grid_row
         """
         # Optional: clamp values to keep the block within bounds.
         new_x_local = max(0, min(new_x_local, self.CELL_WIDTH - block.winfo_width()))
@@ -372,6 +372,7 @@ class PreProgrammingPage:
         if block:
             y = block.winfo_y()
             target_row = max(0, min(int(y // self.CELL_HEIGHT), self.GRID_ROWS - 1))
+            print(target_row)
             if self.grid_cells[target_row][0]:
                 self.move_blocks_down(target_row)
             block.grid_row = target_row

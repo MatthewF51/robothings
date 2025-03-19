@@ -82,6 +82,15 @@ class ObservationPage:
             font=("Arial", 12, "bold"),
             command=lambda: self.controller.show_page("StartScreen"),
         ).pack(pady=10, padx=10, fill="x")
+        
+        tk.Button(
+            box_a,
+            text="Back to Start Page",
+            bg="#07b6c8",
+            fg="white",
+            font=("Arial", 12, "bold"),
+            command=lambda: self.controller.show_page("ManualPage"),
+        ).pack(pady=10, padx=10, fill="x")
 
         # Middle Frame (Video + Command Log)
         middle_frame = tk.Frame(self.frame, bg="white")

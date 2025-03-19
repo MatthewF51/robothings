@@ -661,10 +661,10 @@ class PreProgrammingPage:
                         self.grid_cells[r][0] = block
 
                     self.command_list.append(block)
-            self.move_block_up()
+            #self.move_block_up()
             self.refresh_visible_blocks()
             self.update_command_list()
-            self.move_block_up()
+            #self.move_block_up()
             messagebox.showinfo(
                 "Load Success", f"Program '{file_name}.txt' loaded successfully."
             )

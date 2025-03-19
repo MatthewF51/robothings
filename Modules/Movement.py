@@ -3,7 +3,7 @@ from utils import send_command
 
 # Constants
 FIXED_ROTATION_SPEED = 1  # rad/s
-COMPENSATION_TIME = 1.5  # Extra time to account for delay
+COMPENSATION_TIME = 1  # Extra time to account for delay
 
 COMMANDS = {
     "Move Forward": {
@@ -11,7 +11,7 @@ COMMANDS = {
             target=send_command,
             args=(
                 f"rostopic pub /mobile_base_controller/cmd_vel geometry_msgs/Twist "
-                f"'{{linear: {{x: 0.5, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: 0.0}}}}' -r 10",
+                f"'{{linear: {{x: 0.25, y: 0.0, z: 0.0}}, angular: {{x: 0.0, y: 0.0, z: 0.0}}}}' -r 10",
                 (float(distance) / 0.5) + COMPENSATION_TIME,  # Compensate for delay
             ),
             daemon=True,

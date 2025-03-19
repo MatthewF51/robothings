@@ -470,6 +470,7 @@ class PreProgrammingPage:
 
     def run_program(self):
         # Executes commands using send_command() in a background thread and logs it
+        
         self.controller.pages["ObservationPage"].update_progress(0)  # Start
         
         self.controller.show_page("ObservationPage")
@@ -479,12 +480,22 @@ class PreProgrammingPage:
 
     def execute_commands(self):
         # Executes commands sequentially, waiting until each finishes. Speech runs in parallel
+        self.stop_event = threading.Event()
         total_commands = len(self.command_list)
         if total_commands == 0:
             self.controller.pages["ObservationPage"].update_progress(0)
             return
 
         for index, block in enumerate(self.command_list):
+            if self.controller.stop_flag:
+                print("Stop event set")
+                break
+            	
+            if self.stop_event.is_set():
+                print("Stop event set")
+                break
+        
+        
             command_name = getattr(block, "command_name", None)
             command_module = getattr(block, "command_module", None)
 

@@ -83,14 +83,6 @@ class ObservationPage:
             command=lambda: self.controller.show_page("StartScreen"),
         ).pack(pady=10, padx=10, fill="x")
         
-        tk.Button(
-            box_a,
-            text="Back to Start Page",
-            bg="#07b6c8",
-            fg="white",
-            font=("Arial", 12, "bold"),
-            command=lambda: self.controller.show_page("ManualPage"),
-        ).pack(pady=10, padx=10, fill="x")
 
         # Middle Frame (Video + Command Log)
         middle_frame = tk.Frame(self.frame, bg="white")
@@ -168,18 +160,21 @@ class ObservationPage:
     def emergency_stop(self):
         # Sends Ctrl+C to stop running commands without closing the UI
         self.log_action("!!! Emergency Stop Activated !!!")
+        self.controller.stop_flag = True
+        if hasattr(self, "stop_event"):
+            self.stop_event.set()
+            
         try:
-            result = subprocess.run(
-                ["pgrep", "-f", "ros"], capture_output=True, text=True
-            )
+            result = subprocess.run(["pgrep", "-f", "ros"], capture_output=True, text=True)
             pids = result.stdout.strip().split("\n")
 
             if pids and pids[0]:
                 for pid in pids:
-                    os.kill(int(pid), signal.SIGINT)
-                self.log_action("All commands stopped successfully.")
-            else:
-                self.log_action("No active commands were running.")
+                    try:
+                        os.kill(int(pid), signal.SIGINT)
+                    except ProcessLookupError:
+                        continue
+                
         except Exception as e:
             self.log_action(f"Error stopping commands: {e}")
 
@@ -206,9 +201,11 @@ class ObservationPage:
                     file.write(entry + "\n")
             messagebox.showinfo("Save Log", f"Log saved to {file_path}!")
             self.clear_log()
+            self.controller.stop_flag = False
         except Exception as e:
             messagebox.showerror("Save Error", f"Error saving log: {e}")
             self.clear_log()
+            self.controller.stop_flag = False
 
     def clear_log(self):
         # Clear the Text widget

@@ -38,15 +38,4 @@ class StartScreen:
         )
         pre_programming_button.grid(row=1, column=0, pady=10, sticky="n")
 
-        # Create Manual Control button (future functionality)
-        manual_control_button = tk.Button(
-            self.frame,
-            text="Manual Control",
-            width=20,
-            height=2,
-            bg="#007BFF",  # Blue
-            fg="white",
-            font=("Arial", 12, "bold"),
-            # command=lambda: self.controller.show_page("ManualControlPage")
-        )
-        manual_control_button.grid(row=2, column=0, pady=10, sticky="n")
+        

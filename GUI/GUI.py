@@ -21,6 +21,8 @@ class GUIController:
         self.pages = {}
         self.initialize_pages()
 
+        self.stop_flag = False
+
     def initialize_pages(self):
         # Initialize and store all pages
         self.pages["StartScreen"] = StartScreen(self.container, self)
